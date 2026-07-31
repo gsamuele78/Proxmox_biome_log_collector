@@ -1,0 +1,53 @@
+## Optional PegaProx overlay — EXPERIMENTAL/BETA (upstream is v0.9.x, AGPL-3.0,
+## not a 1.0 release). Disabled by default: this file is never read unless you
+## explicitly add it, e.g.:
+##   docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml up -d
+## See docs/adr/0005-cv4pve-diag-default-pegaprox-experimental.md before
+## enabling this in anything resembling production. cv4pve-diag remains the
+## default, supported compliance auditor.
+
+services:
+  pegaprox:
+    image: ghcr.io/pegaprox/pegaprox:0.9.15
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      PEGAPROX_ADMIN_EMAIL: "${PEGAPROX_ADMIN_EMAIL}"
+    volumes:
+      - pegaprox-data:/data
+    networks:
+      - edge
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:5000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pegaprox.rule=Host(`pegaprox.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.pegaprox.entrypoints=websecure"
+      - "traefik.http.routers.pegaprox.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pegaprox.middlewares=security-headers@file,basic-auth@file"
+      - "traefik.http.services.pegaprox.loadbalancer.server.port=5000"
+      # PegaProx's own docs note ports 5001 (VNC websocket) and 5002 (SSH
+      # websocket) as separate optional features of its web UI proxying
+      # further into guest consoles — not routed here by default since this
+      # stack does not currently document/scope that use case. See
+      # docs/roadmap.md if you want to extend this overlay.
+
+volumes:
+  pegaprox-data:
