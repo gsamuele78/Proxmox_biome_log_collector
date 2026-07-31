@@ -63,6 +63,22 @@ documented, git-tracked repository.
   section.
 - Replaced the transcript's suggested Promtail agent with Grafana Alloy
   (Promtail reaches end-of-life in March 2026).
+- Split `docs/keycloak-integration.md`'s PVE/PDM OIDC section in two: PVE
+  keeps `pveum realm add`; PDM uses its own separate CLI
+  (`proxmox-datacenter-manager-admin`), confirmed to support an `openid`
+  realm type against PDM 1.1.7's official docs, but with the exact
+  `realm add` flags left as a verify-on-deploy step rather than guessed.
+
+### Fixed
+
+- `config/alertmanager/alertmanager.yml.tmpl` rendered an invalid config
+  when `ALERTMANAGER_WEBHOOK_URL` was left at its documented-empty
+  `.env.example` default — Alertmanager rejects a `webhook_configs` entry
+  with an empty `url`. Found by actually running `amtool check-config`
+  against the rendered template (previously undemonstrated locally for
+  lack of the binary); fixed by commenting the webhook block out by
+  default with uncomment instructions, since `envsubst` has no
+  conditionals.
 
 [Unreleased]: https://github.com/gsamuele78/Proxmox_biome_log_collector/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/gsamuele78/Proxmox_biome_log_collector/releases/tag/v0.1.0

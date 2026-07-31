@@ -58,11 +58,14 @@ there's no upstream source to re-fetch it from).
   operation). Worth revisiting once the cluster reaches the upper end of
   its planned 7→11 node growth and monitoring becomes more operationally
   critical.
-- **SSO for PDM confirmed end-to-end** — `docs/keycloak-integration.md`
-  step 3 notes PDM's own OIDC realm support should be checked against the
-  PDM version actually deployed; if it's not yet supported, oauth2-proxy
-  covers the gap in the meantime (step 4), but native support is
-  preferable once available.
+- **SSO for PDM confirmed end-to-end** — PDM's official docs (checked
+  against PDM 1.1.7) confirm it supports `openid` as a realm type, but via
+  its own separate CLI (`proxmox-datacenter-manager-admin`), not `pveum`.
+  The exact `realm add` flag names weren't in the fetched docs and remain
+  unverified against a running instance — see
+  [docs/keycloak-integration.md](keycloak-integration.md) step 3b. If the
+  deployed PDM version turns out not to support this, oauth2-proxy covers
+  the gap in the meantime (step 4).
 - **Multi-cluster** — the current design assumes one Proxmox VE cluster.
   Extending `config/prometheus/targets/*.json` and `CV4PVE_*` host lists
   to a second cluster is mechanically straightforward but untested; label

@@ -32,13 +32,17 @@ receivers:
       - to: "${ALERTMANAGER_RECEIVER_EMAIL}"
         send_resolved: true
 
+  # If you set ALERTMANAGER_WEBHOOK_URL in .env, uncomment the two lines
+  # below (envsubst has no conditionals — a webhook_configs block with an
+  # empty url fails `amtool check-config`, so it can't ship enabled by
+  # default). Re-run `scripts/bootstrap-monitoring-vm.sh` after editing.
   - name: critical
     email_configs:
       - to: "${ALERTMANAGER_RECEIVER_EMAIL}"
         send_resolved: true
-    webhook_configs:
-      - url: "${ALERTMANAGER_WEBHOOK_URL}"
-        send_resolved: true
+    # webhook_configs:
+    #   - url: "${ALERTMANAGER_WEBHOOK_URL}"
+    #     send_resolved: true
 
 inhibit_rules:
   - source_matchers:

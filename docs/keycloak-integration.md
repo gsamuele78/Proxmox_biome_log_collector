@@ -53,10 +53,9 @@ Traefik router's `middlewares` label (it currently has none —
 deliberately left off Traefik-level auth from the start since it always
 had its own login screen).
 
-## 3. Proxmox VE / PDM — native OIDC realm
+## 3. Proxmox VE — native OIDC realm via `pveum`
 
-Both PVE and PDM share the same `pveum` realm mechanism. Run on any PVE
-node (propagates cluster-wide via `/etc/pve`):
+Run on any PVE node (propagates cluster-wide via `/etc/pve`):
 
 ```bash
 pveum realm add keycloak \
@@ -74,17 +73,44 @@ authentication happens at Keycloak, but PVE's own permission model
 roles/ACLs to autocreated users (or a group they map into via
 `--groups-claim`, PVE 8.4+) before relying on this in production.
 
-PDM reads the same realm configuration convention — check
-`https://pdm.${BASE_DOMAIN}/` for an OpenID login option once the realm is
-added; if PDM's version doesn't yet support its own `pveum realm add`
-target, route it through oauth2-proxy instead (step 4).
+## 3b. PDM — native OIDC realm via its own CLI (not `pveum`)
+
+PDM does **not** share PVE's `pveum` tool — it has its own separate CLI,
+`proxmox-datacenter-manager-admin` (confirmed against
+[pdm.proxmox.com/docs](https://pdm.proxmox.com/docs/), PDM 1.1.7). Its
+"User Configuration" section lists `openid` alongside PAM/LDAP/AD as a
+supported realm type, so native OIDC is available — but the exact
+`realm add` flag names (issuer-url/client-id/client-key equivalents)
+weren't in the fetched documentation excerpt and weren't verified against
+a running instance. Before relying on this:
+
+```bash
+proxmox-datacenter-manager-admin realm add --help
+```
+
+on the actual deployed PDM host, to confirm the current flag names, then
+adjust the example below accordingly (this is intentionally left as a
+verify-on-deploy step rather than a copy-pasted guess):
+
+```bash
+# EXAMPLE — confirm flags with --help above before running.
+proxmox-datacenter-manager-admin realm add keycloak \
+  --type openid \
+  --issuer-url "${KEYCLOAK_ISSUER_URL}" \
+  --client-id "${KEYCLOAK_CLIENT_ID}" \
+  --client-key "${KEYCLOAK_CLIENT_SECRET}"
+```
+
+If the deployed PDM version turns out not to support this after all,
+route it through oauth2-proxy instead (step 4).
 
 ## 4. oauth2-proxy — everything else
 
-Services with no native OIDC support — PDM (if not covered by step 3 on
-your PDM version) and cv4pve-diag's static HTML compliance reports served
-by `audit-report-server` — are covered by **oauth2-proxy** as a Traefik
-`forwardAuth` middleware instead. This is the gap ADR-0006 calls out
+Services with no native OIDC support — PDM (if step 3b's realm add doesn't
+pan out on your PDM version) and cv4pve-diag's static HTML compliance
+reports served by `audit-report-server` — are covered by
+**oauth2-proxy** as a Traefik `forwardAuth` middleware instead. This is
+the gap ADR-0006 calls out
 explicitly: without this, those two surfaces would stay on local/basic
 auth forever even after Keycloak is otherwise live everywhere else.
 
