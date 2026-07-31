@@ -1,0 +1,19 @@
+[Unit]
+Description=Proxmox Biome — cv4pve-diag NIS2 compliance scan
+Documentation=https://github.com/gsamuele78/Proxmox_biome_log_collector
+# Only makes sense once the core Docker Compose stack is up.
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# EDIT this path to match where the repo is actually checked out on the
+# monitoring VM (see docs/deployment-guide.md).
+WorkingDirectory=/opt/proxmox-biome
+ExecStart=/opt/proxmox-biome/scripts/run-cv4pve-diag.sh
+# Compliance-scan output already goes to the journal via docker compose's
+# own stdout/stderr; no separate log file needed here.
+
+[Install]
+WantedBy=multi-user.target

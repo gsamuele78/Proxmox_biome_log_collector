@@ -1,0 +1,59 @@
+// Grafana Alloy config for a single Proxmox VE node. Rendered from this
+// template by scripts/node-setup/install-alloy-agent.sh, which substitutes
+// __LOKI_PUSH_URL__ with the monitoring VM's Loki ingest endpoint
+// (http://<monitoring-vm-host>:3100/loki/api/v1/push — internal management
+// LAN, not through Traefik/443, per the firewall model in ADR-0001).
+//
+// Component reference: https://grafana.com/docs/alloy/latest/reference/components/loki/
+
+loki.write "monitoring_vm" {
+	endpoint {
+		url = "__LOKI_PUSH_URL__"
+	}
+}
+
+// systemd journal — covers pveproxy, pvedaemon, pve-cluster, corosync, sshd, etc.
+loki.relabel "journal" {
+	forward_to = []
+
+	rule {
+		source_labels = ["__journal__systemd_unit"]
+		target_label  = "unit"
+	}
+	rule {
+		source_labels = ["__journal_priority_keyword"]
+		target_label  = "level"
+	}
+	rule {
+		source_labels = ["__journal__hostname"]
+		target_label  = "host"
+	}
+}
+
+loki.source.journal "read" {
+	forward_to    = [loki.write.monitoring_vm.receiver]
+	relabel_rules = loki.relabel.journal.rules
+	labels        = {job = "systemd-journal"}
+}
+
+// Proxmox VE firewall log — NIS2 traceability (network segmentation control
+// evidence). See docs/hardening.md's control-mapping table.
+local.file_match "pve_firewall" {
+	path_targets = [{"__path__" = "/var/log/pve-firewall.log", job = "pve-firewall"}]
+}
+
+loki.source.file "pve_firewall" {
+	targets    = local.file_match.pve_firewall.targets
+	forward_to = [loki.write.monitoring_vm.receiver]
+}
+
+// auditd — NIS2 traceability (access-control / incident-detection evidence).
+// Requires scripts/node-setup/configure-auditd.sh to have run first.
+local.file_match "auditd" {
+	path_targets = [{"__path__" = "/var/log/audit/audit.log", job = "auditd"}]
+}
+
+loki.source.file "auditd" {
+	targets    = local.file_match.auditd.targets
+	forward_to = [loki.write.monitoring_vm.receiver]
+}

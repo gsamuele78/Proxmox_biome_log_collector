@@ -1,0 +1,12 @@
+[Unit]
+Description=Proxmox Biome — daily cv4pve-diag NIS2 compliance scan schedule
+Documentation=https://github.com/gsamuele78/Proxmox_biome_log_collector
+
+[Timer]
+# Once daily, off-hours. Adjust to your change-management window.
+OnCalendar=*-*-* 02:15:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
