@@ -1,0 +1,16 @@
+title = "gitleaks config — Proxmox Biome Observability Stack"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe placeholders in example/template files"
+paths = [
+  '''\.env\.example$''',
+  '''config/prometheus/targets/.*\.json\.example$''',
+  '''docs/.*''',
+]
+regexes = [
+  '''CHANGEME''',
+  '''example\.(com|internal)''',
+]
