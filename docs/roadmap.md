@@ -51,6 +51,57 @@ exporter don't surface. Commit it as
 one *should* be committed, unlike the fetched community ones, since
 there's no upstream source to re-fetch it from).
 
+## Verification gaps to close on real hardware / CI
+
+Three items that were pushed as far as they could go without a real
+Proxmox VM or a Docker daemon in the build environment. Each needs one
+concrete confirmation step, listed below, before it can be marked fully
+verified in `docs/plan/EXECUTION-PLAN.md`.
+
+### PDM firewall script's host-integration steps
+
+**Status**: the nftables ruleset `scripts/configure-pdm-firewall.sh`
+generates was proven correct with real traffic tests in an isolated
+network namespace (loopback accepted, edge subnet accepted, everything
+else dropped — see `docs/plan/EXECUTION-PLAN.md`'s Verification section).
+Not exercised: `systemctl enable --now nftables.service`, and the
+idempotent `/etc/nftables.conf` include-line logic, against a real host
+that may already have its own `/etc/nftables.conf` content.
+
+**Plan**: on first real deployment, run the script on the actual
+monitoring VM, reboot, confirm `nft list ruleset` still shows
+`proxmox_biome_pdm`, and confirm it didn't clobber any pre-existing
+`/etc/nftables.conf` content. Record the result in `EXECUTION-PLAN.md`.
+
+### PDM's OIDC realm-add CLI flags
+
+**Status**: PDM's official docs (checked against PDM 1.1.7) confirm it
+supports an `openid` realm type via its own separate CLI
+(`proxmox-datacenter-manager-admin`, not `pveum`) — see
+[docs/keycloak-integration.md](keycloak-integration.md) step 3b. The exact
+`realm add` flag names weren't in the fetched documentation excerpt.
+
+**Plan**: on the deployed PDM host, run
+`proxmox-datacenter-manager-admin realm add --help`, update step 3b's
+example with the confirmed flags, and verify a login actually redirects
+to Keycloak. If the deployed version doesn't support this after all,
+oauth2-proxy already covers the gap (step 4).
+
+### Integration smoke test end-to-end
+
+**Status**: `docker compose config` (both compose files), `promtool`, and
+`amtool` were run for real against static binaries downloaded directly
+from their GitHub releases — no daemon needed for config validation, and
+this caught a real Alertmanager config bug (see CHANGELOG's `[0.1.0]`
+"Fixed" section). What wasn't run: `tests/integration/smoke-test.sh`
+itself, which needs a live Docker daemon to actually boot containers,
+wait for healthchecks, and curl Traefik-routed paths.
+
+**Plan**: the first green run of
+`.github/workflows/validate-and-test.yml` after this is pushed is the
+real verification of this gap (GitHub Actions runners have Docker). No
+local action needed beyond watching that run.
+
 ## Further ahead
 
 - **HA for the monitoring VM itself** — currently a single VM; losing it
@@ -58,14 +109,6 @@ there's no upstream source to re-fetch it from).
   operation). Worth revisiting once the cluster reaches the upper end of
   its planned 7→11 node growth and monitoring becomes more operationally
   critical.
-- **SSO for PDM confirmed end-to-end** — PDM's official docs (checked
-  against PDM 1.1.7) confirm it supports `openid` as a realm type, but via
-  its own separate CLI (`proxmox-datacenter-manager-admin`), not `pveum`.
-  The exact `realm add` flag names weren't in the fetched docs and remain
-  unverified against a running instance — see
-  [docs/keycloak-integration.md](keycloak-integration.md) step 3b. If the
-  deployed PDM version turns out not to support this, oauth2-proxy covers
-  the gap in the meantime (step 4).
 - **Multi-cluster** — the current design assumes one Proxmox VE cluster.
   Extending `config/prometheus/targets/*.json` and `CV4PVE_*` host lists
   to a second cluster is mechanically straightforward but untested; label
