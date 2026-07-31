@@ -1,0 +1,49 @@
+## Metric names confirmed against docs.ceph.com/en/latest/mgr/prometheus/ —
+## Ceph native health-check names, "." -> "_", "ceph_" prepended.
+## Requires `ceph mgr module enable prometheus` on the cluster (once, propagates
+## cluster-wide) — see scripts/node-setup/enable-ceph-prometheus.sh.
+
+groups:
+  - name: ceph-cluster
+    rules:
+      - alert: CephHealthError
+        expr: ceph_health_status == 2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ceph cluster health is HEALTH_ERR"
+          description: >-
+            ceph_health_status == 2 for 5m. Run `ceph health detail` on a mon
+            node immediately — this is a cluster-affecting condition.
+
+      - alert: CephHealthWarn
+        expr: ceph_health_status == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ceph cluster health is HEALTH_WARN"
+          description: "ceph_health_status == 1 for 15m. Run `ceph health detail`."
+
+      - alert: CephOSDDown
+        expr: ceph_osd_up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ceph OSD {{ $labels.ceph_daemon }} is down"
+          description: >-
+            {{ $labels.ceph_daemon }} has been down for 5m. With replicated
+            pools this reduces redundancy; check the underlying node/disk.
+
+      - alert: CephPGsDegraded
+        expr: ceph_pg_degraded > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} degraded placement groups"
+          description: >-
+            Degraded PGs mean reduced data redundancy. Usually self-heals via
+            backfill/recovery; escalate if the count keeps growing.

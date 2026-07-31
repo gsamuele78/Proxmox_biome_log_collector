@@ -1,0 +1,50 @@
+## TEMPLATE — Alertmanager does not support ${VAR} substitution in its own
+## config file (unlike docker-compose.yml), so this .tmpl is rendered to the
+## real config/alertmanager/alertmanager.yml (gitignored, contains real SMTP
+## credentials) by `scripts/bootstrap-monitoring-vm.sh` using `envsubst`,
+## sourcing `.env` first — same pattern as the generated
+## config/prometheus/targets/*.json files. Never hand-edit the rendered file;
+## edit this template and re-run the bootstrap script.
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: "${ALERTMANAGER_SMTP_SMARTHOST}"
+  smtp_from: "${ALERTMANAGER_SMTP_FROM}"
+  smtp_auth_username: "${ALERTMANAGER_SMTP_USERNAME}"
+  smtp_auth_password: "${ALERTMANAGER_SMTP_PASSWORD}"
+  smtp_require_tls: true
+
+route:
+  receiver: default
+  group_by: ["alertname", "cluster"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: critical
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    email_configs:
+      - to: "${ALERTMANAGER_RECEIVER_EMAIL}"
+        send_resolved: true
+
+  - name: critical
+    email_configs:
+      - to: "${ALERTMANAGER_RECEIVER_EMAIL}"
+        send_resolved: true
+    webhook_configs:
+      - url: "${ALERTMANAGER_WEBHOOK_URL}"
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - instance

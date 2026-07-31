@@ -1,0 +1,36 @@
+groups:
+  - name: proxmox-node
+    rules:
+      - alert: ProxmoxNodeDown
+        expr: up{job="proxmox-node-exporter"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox node exporter unreachable on {{ $labels.instance }}"
+          description: >-
+            node_exporter on {{ $labels.instance }} has been unreachable for 5m.
+            Either the node is down or the network path from the monitoring VM
+            is broken. Check the node directly before assuming a hardware fault.
+
+      - alert: ProxmoxNodeHighIOWait
+        expr: avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) > 0.20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High I/O wait on {{ $labels.instance }}"
+          description: >-
+            Average iowait > 20% for 10m on {{ $labels.instance }} — often an
+            early indicator of Ceph OSD/storage backend contention.
+
+      - alert: ProxmoxRootFilesystemFillingUp
+        expr: >-
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} < 0.10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} < 10% free"
+          description: "Less than 10% free space remaining on {{ $labels.mountpoint }}."

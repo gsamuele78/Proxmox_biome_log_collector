@@ -1,0 +1,27 @@
+## Modern TLS profile (Mozilla "modern" baseline, TLS 1.3 preferred, TLS 1.2 minimum
+## for older admin browsers). See docs/hardening.md#tls.
+
+tls:
+  options:
+    modern:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+      curvePreferences:
+        - X25519
+        - CurveP256
+      sniStrict: true
+
+## If BASE_DOMAIN is not a publicly-resolvable name, ACME/Let's Encrypt cannot
+## issue a certificate (no HTTP-01 challenge path from the internet). In that
+## case, mount your internal CA-issued cert/key here instead and remove the
+## `certresolver` label from services in docker-compose.yml. See
+## docs/deployment-guide.md#tls-certificates.
+# certificates:
+#   - certFile: /certs/monitoring-vm.crt
+#     keyFile: /certs/monitoring-vm.key

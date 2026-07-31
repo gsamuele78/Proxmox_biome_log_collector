@@ -1,0 +1,47 @@
+## Shared Traefik middlewares. Referenced by name (`@file`) from Docker labels
+## on individual services in docker-compose.yml.
+
+http:
+  middlewares:
+    security-headers:
+      headers:
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "geolocation=(), microphone=(), camera=()"
+        customResponseHeaders:
+          Server: ""
+
+    ## Phase 1 (bootstrap) auth. Credentials come from TRAEFIK_BASIC_AUTH_USERS
+    ## in .env. Swap routers from this middleware to `oauth2-proxy-auth` once
+    ## Keycloak is live — see docs/keycloak-integration.md.
+    basic-auth:
+      basicAuth:
+        usersFile: /etc/traefik/dynamic/.htpasswd
+        removeHeader: true
+
+    ## Phase 2 (steady-state) auth: forwardAuth to the oauth2-proxy service,
+    ## which validates the session against Keycloak OIDC. Used for services
+    ## with no native OIDC support (PDM, cv4pve-diag static reports).
+    oauth2-proxy-auth:
+      forwardAuth:
+        address: "http://oauth2-proxy:4180/oauth2/auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-User
+          - X-Auth-Request-Email
+          - Set-Cookie
+
+    rate-limit:
+      rateLimit:
+        average: 50
+        burst: 100
+        period: 1s
+
+    compress:
+      compression: {}

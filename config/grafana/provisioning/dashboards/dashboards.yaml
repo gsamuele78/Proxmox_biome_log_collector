@@ -1,0 +1,16 @@
+## Folder-based dashboard provider. Actual dashboard JSON files are fetched by
+## scripts/fetch-community-dashboards.sh into ./dashboards/ (gitignored — always
+## pulled fresh from grafana.com, never vendored stale copies in git).
+apiVersion: 1
+
+providers:
+  - name: proxmox-biome
+    orgId: 1
+    folder: "Proxmox Biome"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 300
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/files
+      foldersFromFilesStructure: false

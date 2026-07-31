@@ -1,0 +1,13 @@
+[
+  {
+    "targets": [
+      "pve-node01.mgmt.example.internal:9100",
+      "pve-node02.mgmt.example.internal:9100",
+      "pve-node03.mgmt.example.internal:9100"
+    ],
+    "labels": {
+      "job": "proxmox-node-exporter",
+      "cluster": "proxmox-biome"
+    }
+  }
+]

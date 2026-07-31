@@ -1,0 +1,46 @@
+## Routes https://pdm.<BASE_DOMAIN>/ (443, via Traefik) to the natively-installed
+## Proxmox Datacenter Manager package running on THIS SAME HOST on :8443.
+##
+## PDM's API daemon has NO configurable listen address (no LISTEN_IP
+## equivalent, unlike PVE's pveproxy) — it always binds 0.0.0.0:8443. So
+## instead of an app-level loopback bind, `scripts/configure-pdm-firewall.sh`
+## installs a host nftables rule restricting tcp/8443 to loopback + the
+## `monitoring-edge` Docker network's subnet only. Nothing else on the
+## management LAN can reach it, and it never gets a perimeter firewall rule
+## either. See ADR-0003.
+##
+## Traefik reaches it via the special `host-gateway` address Docker exposes
+## as `host.docker.internal` (wired up by `extra_hosts` on the traefik
+## service in docker-compose.yml) — a container-to-host hop over the Docker
+## bridge, which is exactly the source address the nftables rule above
+## allow-lists.
+##
+## `insecureSkipVerify` is scoped to this one serversTransport (the PDM
+## loopback backend only, self-signed cert PDM generates on install) — it does
+## NOT weaken TLS verification anywhere else in the stack. See
+## docs/hardening.md#pdm-loopback-tls.
+
+http:
+  routers:
+    pdm:
+      rule: "Host(`pdm.${BASE_DOMAIN}`)"
+      entryPoints:
+        - websecure
+      service: pdm
+      middlewares:
+        - security-headers
+        - basic-auth
+        # - oauth2-proxy-auth   # swap to this once Keycloak/oauth2-proxy is live
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    pdm:
+      loadBalancer:
+        servers:
+          - url: "https://host.docker.internal:8443"
+        serversTransport: pdm-loopback
+
+  serversTransports:
+    pdm-loopback:
+      insecureSkipVerify: true

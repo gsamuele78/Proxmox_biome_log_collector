@@ -1,0 +1,11 @@
+[
+  {
+    "targets": [
+      "pve-node01.mgmt.example.internal:9283"
+    ],
+    "labels": {
+      "job": "ceph-mgr-prometheus",
+      "cluster": "proxmox-biome"
+    }
+  }
+]
