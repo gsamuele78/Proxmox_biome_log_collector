@@ -1,0 +1,12 @@
+---
+ignored:
+  # Unpinned apt package versions in build-stage-only tooling (ca-certificates,
+  # curl) that never ships in the final distroless image — see the
+  # per-Dockerfile inline justification in docker/*/Dockerfile.
+  - DL3008
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+  - gcr.io
+  - quay.io

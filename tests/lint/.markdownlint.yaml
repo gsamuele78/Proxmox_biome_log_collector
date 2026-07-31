@@ -1,0 +1,20 @@
+---
+default: true
+
+# Line length is deliberately not enforced: ADRs/docs use readable prose
+# wrapping (~80-100 chars) but headings and inline code/URLs routinely
+# exceed a strict 80-char cap for no real readability loss.
+MD013: false
+
+# Allow inline HTML sparingly used for things like <br> in tables — not used
+# yet, but not worth failing the build over if a doc needs it.
+MD033: false
+
+# ADRs intentionally reuse heading text like "## Context"/"## Decision"
+# across sibling files (not within the same file), which is fine.
+MD024:
+  siblings_only: true
+
+# Table pipes are hand-formatted for readability, not machine-aligned to
+# the widest cell in every column — not worth failing the build over.
+MD060: false

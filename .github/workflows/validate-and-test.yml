@@ -1,0 +1,59 @@
+name: Validate and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare throwaway .env
+        run: cp .env.example .env
+      - name: Validate core compose file
+        run: docker compose config --quiet
+      - name: Validate core + pegaprox overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml config --quiet
+
+  promtool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: promtool check config
+        run: |
+          docker run --rm -v "$PWD/config/prometheus:/config:ro" prom/prometheus:v3.13.2 \
+            promtool check config /config/prometheus.yml
+      - name: promtool check rules
+        run: |
+          docker run --rm -v "$PWD/config/prometheus:/config:ro" prom/prometheus:v3.13.2 \
+            promtool check rules /config/rules/proxmox.rules.yml /config/rules/ceph.rules.yml
+
+  amtool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Render alertmanager.yml from template with dummy values
+        run: |
+          export ALERTMANAGER_SMTP_HOST=smtp.invalid:587
+          export ALERTMANAGER_SMTP_FROM=alerts@smoketest.internal
+          export ALERTMANAGER_SMTP_USER=smoketest
+          export ALERTMANAGER_SMTP_PASSWORD=smoketest
+          export ALERTMANAGER_RECEIVER_EMAIL=oncall@smoketest.internal
+          envsubst < config/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml
+      - name: amtool check-config
+        run: |
+          docker run --rm -v /tmp/alertmanager.yml:/config/alertmanager.yml:ro \
+            prom/alertmanager:v0.33.1 amtool check-config /config/alertmanager.yml
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: [compose-config, promtool, amtool]
+    steps:
+      - uses: actions/checkout@v5
+      - run: tests/integration/smoke-test.sh

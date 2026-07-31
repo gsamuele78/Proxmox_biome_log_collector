@@ -1,0 +1,27 @@
+---
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  # Compose files and Traefik/Prometheus config commonly use short/empty
+  # values or comments that trip the default truthy check on things like
+  # `enabled: true` vs YAML 1.1 boolean edge cases — keep the default
+  # sensible-values behavior but don't fail on document-start markers,
+  # since some of these files are plain config (no `---`) and others are
+  # multi-document or Compose-style single documents.
+  document-start: disable
+  # GitHub Actions' `on:` key is a YAML 1.1 boolean keyword (True) — this is
+  # the standard, harmless false-positive every workflow file triggers.
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  braces:
+    max-spaces-inside: 1
+  brackets:
+    max-spaces-inside: 1
+
+ignore: |
+  .git/

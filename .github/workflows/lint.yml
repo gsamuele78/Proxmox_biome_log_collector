@@ -1,0 +1,56 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install yamllint
+      - run: yamllint -c tests/lint/.yamllint.yml .
+
+  hadolint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lint cv4pve-diag Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/cv4pve-diag/Dockerfile
+          config: tests/lint/.hadolint.yaml
+      - name: Lint cv4pve-metrics-exporter Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/cv4pve-metrics-exporter/Dockerfile
+          config: tests/lint/.hadolint.yaml
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: |
+          shopt -s globstar
+          shellcheck scripts/**/*.sh tests/integration/*.sh
+
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: DavidAnson/markdownlint-cli2-action@v20
+        with:
+          config: tests/lint/.markdownlint.yaml
+          globs: |
+            **/*.md
+            !docs/research/**
