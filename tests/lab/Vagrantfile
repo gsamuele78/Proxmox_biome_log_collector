@@ -1,0 +1,112 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Local KVM/libvirt test lab for the Proxmox Biome stack. See tests/lab/README.md.
+# Tiers are cumulative:
+#
+#   TIER=0  monitoring VM only (Docker stack + native PDM + Mailpit sink)
+#   TIER=1  + pve1, a Proxmox VE 9 node (real PVE API, node agents)
+#   TIER=2  + pve2, pve3: 3-node PVE cluster with a Ceph pool
+#   TIER=3  + idp: Keycloak (OIDC) for oauth2-proxy, PVE and PDM realms
+#
+# Networks (both isolated, no DHCP; libvirt gives the host .1 on each):
+#   mgmt       10.77.10.0/24  stands in for the internal management LAN
+#   perimeter  10.77.20.0/24  stands in for the corporate/VPN side
+# The vagrant-libvirt management network (192.168.121.0/24) only provides
+# SSH and NAT internet access for package installs.
+
+TIER = Integer(ENV.fetch("TIER", "1"))
+REPO = File.expand_path("../..", __dir__)
+
+# Never sync host-side state into the guests, and never let `vagrant rsync`
+# (which runs rsync --delete) wipe files the deployment generated in the guest.
+RSYNC_EXCLUDE = [
+  ".git/", ".serena/", ".omo/", ".claude/", ".codegraph", "tests/lab/.vagrant/",
+  "tests/lab/artifacts/", ".env",
+  "config/traefik/dynamic/.htpasswd",
+  "config/alertmanager/alertmanager.yml",
+  "config/prometheus/targets/*.json",
+  "config/grafana/provisioning/dashboards/files/",
+]
+
+# name, mgmt IP, RAM (MB). pve1 is the cluster founder and the API endpoint.
+PVE_NODES = [
+  ["pve1", "10.77.10.11", 3584],
+  ["pve2", "10.77.10.12", 3072],
+  ["pve3", "10.77.10.13", 3072],
+].first(TIER >= 2 ? 3 : (TIER >= 1 ? 1 : 0))
+
+def lab_networks(vm, mgmt_ip, perimeter_ip = nil)
+  vm.network :private_network, ip: mgmt_ip,
+    libvirt__network_name: "biome-lab-mgmt",
+    libvirt__dhcp_enabled: false, libvirt__forward_mode: "none"
+  return unless perimeter_ip
+  vm.network :private_network, ip: perimeter_ip,
+    libvirt__network_name: "biome-lab-perimeter",
+    libvirt__dhcp_enabled: false, libvirt__forward_mode: "none"
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/trixie64"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder REPO, "/opt/proxmox-biome", type: "rsync",
+    rsync__exclude: RSYNC_EXCLUDE
+
+  config.vm.provider :libvirt do |lv|
+    lv.driver = "kvm"
+    lv.cpu_mode = "host-passthrough"
+    lv.storage_pool_name = "default"
+  end
+
+  config.vm.provision "common", type: "shell", path: "provision/common.sh"
+
+  config.vm.define "monitoring", primary: true do |m|
+    m.vm.hostname = "monitoring"
+    lab_networks(m.vm, "10.77.10.10", "10.77.20.10")
+    m.vm.provider :libvirt do |lv|
+      lv.memory = 5120
+      lv.cpus = 4
+    end
+    m.vm.provision "docker", type: "shell", path: "provision/docker.sh"
+    m.vm.provision "monitoring", type: "shell", path: "provision/monitoring.sh"
+  end
+
+  PVE_NODES.each_with_index do |(name, ip, mem), idx|
+    config.vm.define name do |p|
+      p.vm.hostname = name
+      lab_networks(p.vm, ip)
+      p.vm.provider :libvirt do |lv|
+        lv.memory = mem
+        lv.cpus = 2
+        lv.nested = true
+        # Ceph OSD disk (/dev/vdb); unused below tier 2.
+        lv.storage :file, size: "12G", device: "vdb"
+      end
+      # Two phases around the reboot into the Proxmox kernel.
+      p.vm.provision "pve-kernel", type: "shell", path: "provision/pve-install.sh",
+        args: ["kernel"], reboot: true
+      p.vm.provision "pve-packages", type: "shell", path: "provision/pve-install.sh",
+        args: ["packages", idx.zero? ? "founder" : "member"]
+      p.vm.provision "pve-cluster", type: "shell", path: "provision/pve-cluster.sh",
+        args: [idx.zero? ? "create" : "join", ip]
+      # Last node: Ceph across the whole cluster once every node has joined.
+      if TIER >= 2 && idx == PVE_NODES.length - 1
+        p.vm.provision "ceph", type: "shell", path: "provision/ceph.sh",
+          args: PVE_NODES.map(&:first)
+      end
+    end
+  end
+
+  if TIER >= 3
+    config.vm.define "idp" do |i|
+      i.vm.hostname = "idp"
+      lab_networks(i.vm, "10.77.10.20")
+      i.vm.provider :libvirt do |lv|
+        lv.memory = 1536
+        lv.cpus = 2
+      end
+      i.vm.provision "docker", type: "shell", path: "provision/docker.sh"
+      i.vm.provision "idp", type: "shell", path: "provision/idp.sh"
+    end
+  end
+end

@@ -46,6 +46,7 @@ jobs:
           export ALERTMANAGER_SMTP_USERNAME=smoketest
           export ALERTMANAGER_SMTP_PASSWORD=smoketest
           export ALERTMANAGER_RECEIVER_EMAIL=oncall@smoketest.internal
+          export ALERTMANAGER_SMTP_REQUIRE_TLS=true
           envsubst < config/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml
       - name: amtool check-config
         run: |

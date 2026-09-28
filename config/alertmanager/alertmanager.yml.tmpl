@@ -12,7 +12,9 @@ global:
   smtp_from: "${ALERTMANAGER_SMTP_FROM}"
   smtp_auth_username: "${ALERTMANAGER_SMTP_USERNAME}"
   smtp_auth_password: "${ALERTMANAGER_SMTP_PASSWORD}"
-  smtp_require_tls: true
+  # Keep true in production. Set ALERTMANAGER_SMTP_REQUIRE_TLS=false only for a
+  # plaintext relay (e.g. the Mailpit sink in tests/lab).
+  smtp_require_tls: ${ALERTMANAGER_SMTP_REQUIRE_TLS}
 
 route:
   receiver: default

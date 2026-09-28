@@ -25,3 +25,6 @@ rules:
 
 ignore: |
   .git/
+  .serena/
+  .omo/
+  tests/lab/.vagrant/

@@ -74,6 +74,9 @@ services:
     read_only: true
     tmpfs:
       - /run
+      # The entrypoint renders /tmp/haproxy.cfg at start; without this the
+      # read-only root makes it crash-loop and Traefik discovers no routes.
+      - /tmp
     deploy:
       resources:
         limits:
@@ -392,7 +395,9 @@ services:
       - /var/cache/nginx
       - /var/run
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/ || exit 1"]
+      # 127.0.0.1, not localhost: busybox wget tries ::1 first and nginx
+      # listens on IPv4 only, so "localhost" is refused.
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -444,13 +449,18 @@ services:
       # post-login redirects back to any of them.
       OAUTH2_PROXY_COOKIE_DOMAINS: ".${BASE_DOMAIN}"
       OAUTH2_PROXY_WHITELIST_DOMAINS: ".${BASE_DOMAIN}"
+      # PKCE on the authorization-code flow (Keycloak supports S256).
+      OAUTH2_PROXY_CODE_CHALLENGE_METHOD: "S256"
+      # Only Traefik (monitoring-edge subnet) may set X-Forwarded-*; without
+      # this every client IP is trusted to spoof them.
+      OAUTH2_PROXY_TRUSTED_PROXY_IPS: "172.28.0.0/24"
     networks:
       - edge
     read_only: true
     tmpfs:
       - /tmp
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:4180/ping || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:4180/ping || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

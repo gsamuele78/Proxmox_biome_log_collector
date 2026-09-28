@@ -6,7 +6,57 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `tests/lab/`: a Vagrant + libvirt lab and `tests/e2e/` phases run by
+  `make lab-up` / `make lab-test`, in cumulative tiers: 0 monitoring VM,
+  1 + a Proxmox VE 9 node, 2 + a 3-node PVE cluster with Ceph, 3 + Keycloak.
+  Covers the deployment guide end to end, reboots, Ceph mgr failover,
+  alert delivery by mail (Mailpit sink) for `CephOSDDown` and
+  `ProxmoxNodeDown`, cv4pve-diag host fallback, and OIDC logins through
+  oauth2-proxy, PVE and PDM. See `tests/lab/README.md`.
+- `ALERTMANAGER_SMTP_REQUIRE_TLS` (default `true`) for plaintext relays.
+- oauth2-proxy: PKCE (`S256`) and `OAUTH2_PROXY_TRUSTED_PROXY_IPS` limited to
+  the `monitoring-edge` subnet (it trusted `X-Forwarded-*` from any IP);
+  the `oauth2-proxy-auth` forwardAuth middleware caps the auth response
+  body (`maxResponseBodySize`).
+
 ### Fixed
+
+Found by the first lab run, on real hardware:
+
+- Traefik served 404 for every route. `middlewares.yml` used
+  `compression:`, which Traefik v3 rejects (the key is `compress:`), so the
+  whole file failed to load and every `@file` middleware (security headers,
+  basic auth) was missing.
+- `docker-socket-proxy` crash-looped: its entrypoint writes
+  `/tmp/haproxy.cfg` and the read-only root had no `/tmp` tmpfs. Traefik's
+  Docker provider therefore saw no containers.
+- `audit-report-server` (and oauth2-proxy/PegaProx) healthchecks probed
+  `localhost`, which busybox `wget` resolves to `::1` first; nginx listens
+  on IPv4 only, so the container stayed unhealthy. Probes now use `127.0.0.1`.
+- `configure-pdm-firewall.sh` ran `systemctl enable --now nftables`, which
+  loads Debian's `/etc/nftables.conf` (`flush ruleset`) and wiped Docker's
+  NAT rules: every container lost outbound access (cv4pve-diag: "Host is not
+  reachable") until dockerd restarted. It now only enables the unit for
+  boot. Its table file is also idempotent now (declare, delete, redefine), so
+  re-runs no longer duplicate the rules.
+- `install-alloy-agent.sh` left `/etc/alloy/config.alloy` as `root:root 0640`;
+  the `alloy` service user could not read it and crash-looped. Now
+  `root:alloy`. Re-running the script also failed at `gpg --dearmor`
+  (overwrite prompt with no TTY); it now passes `--yes`.
+- `docs/deployment-guide.md` wrote a one-line `deb ...` entry into a
+  `.sources` file, which apt rejects; it now writes `pdm.list`.
+- `docs/keycloak-integration.md` step 3b told operators to run
+  `proxmox-datacenter-manager-admin realm add`; that CLI has no realm
+  commands. The step now documents the API call the lab verified with a
+  full login. Step 1 listed `https://*.${BASE_DOMAIN}/oauth2/callback` as a
+  redirect URI; Keycloak never matches a wildcard in the host, so it now
+  lists one callback per protected hostname.
+- `.env.example`'s cv4pve-diag privilege note was wrong: backup checks need
+  `Datastore.AllocateSpace` + `VM.Backup`, not `Datastore.Audit`.
+
+Found by review before the lab existed:
 
 - Loki was unreachable from the PVE nodes: port 3100 was never published,
   so no Alloy agent could push logs. It is now published on

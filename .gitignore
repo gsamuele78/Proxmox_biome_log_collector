@@ -8,6 +8,9 @@
 !config/traefik/dynamic/*.pem.example
 
 # Runtime data volumes if bind-mounted locally for testing
+.omo
+.omo/
+.omo/*
 data/
 volumes/
 prometheus-data/
@@ -52,3 +55,9 @@ Thumbs.db
 
 # Claude Code local settings (already present, keep local-only permission overrides out of history)
 .claude/settings.local.json
+tests/lab/.vagrant/
+tests/lab/artifacts/
+
+# Local agent/tooling state (Serena, oh-my-opencode) — never commit
+.serena/
+.omo/

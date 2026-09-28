@@ -1,0 +1,38 @@
+{
+  "realm": "lab",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "proxmox-monitoring",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "biome-lab-client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://audit.biome.lab.test/*",
+        "https://prometheus.biome.lab.test/*",
+        "https://alertmanager.biome.lab.test/*",
+        "https://traefik.biome.lab.test/*",
+        "https://pdm.biome.lab.test/*",
+        "https://pdm.biome.lab.test",
+        "https://pve1.biome.lab.test:8006/*",
+        "https://pve1.biome.lab.test:8006"
+      ],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "labuser",
+      "enabled": true,
+      "email": "labuser@biome.lab.test",
+      "emailVerified": true,
+      "firstName": "Lab",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "labpass", "temporary": false }]
+    }
+  ]
+}

@@ -60,6 +60,13 @@ in CI — so PVE/Ceph-specific scrape targets and cv4pve API calls are outside
 its scope. See `docs/deployment-guide.md` for how to validate those against
 real hardware.
 
+## Local VM lab
+
+`tests/lab/` (Vagrant + libvirt) runs the deployment for real: a Docker
+daemon, native PDM and a real Proxmox VE 9 node, including the node-setup
+scripts, the PDM firewall and a reboot. `make lab-up && make lab-test`;
+see `tests/lab/README.md`.
+
 ## What's verified vs. documented-only
 
 Everything above runs in CI against the real container images. What it does

@@ -50,6 +50,8 @@ scripts/generate-secrets.sh
 
 log "Rendering config/alertmanager/alertmanager.yml from template..."
 am_config=config/alertmanager/alertmanager.yml
+# envsubst has no ${VAR:-default}; default here so an older .env keeps TLS on.
+export ALERTMANAGER_SMTP_REQUIRE_TLS="${ALERTMANAGER_SMTP_REQUIRE_TLS:-true}"
 (umask 077 && envsubst < config/alertmanager/alertmanager.yml.tmpl > "${am_config}")
 # The alertmanager container runs as nobody (65534) with all capabilities
 # dropped, so it can only read the bind-mounted file through its group or

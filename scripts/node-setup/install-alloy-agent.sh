@@ -32,7 +32,7 @@ apt-get install -y gpg curl
 
 echo "[alloy] Adding Grafana apt repository..."
 mkdir -p /etc/apt/keyrings
-curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
   > /etc/apt/sources.list.d/grafana.list
 
@@ -43,6 +43,9 @@ apt-get install -y alloy
 echo "[alloy] Rendering config.alloy from template..."
 mkdir -p /etc/alloy
 sed "s#__LOKI_PUSH_URL__#${LOKI_PUSH_URL}#g" "${template}" > /etc/alloy/config.alloy
+# The service runs as the unprivileged `alloy` user: root:alloy 0640, or it
+# cannot read its own config and crash-loops ("permission denied").
+chown root:alloy /etc/alloy/config.alloy
 chmod 640 /etc/alloy/config.alloy
 
 # The packaged service runs as the unprivileged `alloy` user. It needs

@@ -1,0 +1,14 @@
+## Lab-only overlay (tests/lab, tier 3). Applied on top of docker-compose.yml:
+##   docker compose -f docker-compose.yml -f tests/lab/docker-compose.lab.yml --profile keycloak up -d
+## Does what docs/keycloak-integration.md step 4.3 tells an operator to do by
+## hand (swap one router to oauth2-proxy-auth), plus lab DNS for Keycloak.
+
+services:
+  oauth2-proxy:
+    # Containers use Docker's DNS, not the VM's /etc/hosts.
+    extra_hosts:
+      - "keycloak.biome.lab.test:10.77.10.20"
+
+  audit-report-server:
+    labels:
+      - "traefik.http.routers.audit-reports.middlewares=security-headers@file,oauth2-proxy-auth@file"

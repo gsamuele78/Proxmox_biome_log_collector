@@ -42,6 +42,11 @@ dashboard #12910 targets their separate InfluxDB-based `cv4pve-metrics`
 stack, not the Prometheus-based exporter this repo uses. Both were
 verified and ruled out rather than used on the assumption they'd fit.
 
+**Input now available**: `tests/lab` records the real metric names from
+a PVE 9.2 node in `tests/lab/artifacts/monitoring/cv4pve-metric-names.txt`
+(44 names: `cv4pve_node_*`, `cv4pve_guest_*`, `cv4pve_ha_quorate`,
+`cv4pve_guests_not_backed_up`, ...).
+
 **Plan**: hand-build a dashboard against `cv4pve-metrics-exporter`'s
 actual exposed metric names (inspect `https://prometheus.${BASE_DOMAIN}/`
 → `cv4pve_*` after the exporter has been running against a real cluster)
@@ -60,7 +65,12 @@ verified in `docs/plan/EXECUTION-PLAN.md`.
 
 ### PDM firewall script's host-integration steps
 
-**Status**: the nftables ruleset `scripts/configure-pdm-firewall.sh`
+**Closed by `tests/lab/`** (`t1-monitoring.sh`, `t1-after-reboot.sh`): on
+a real Debian 13 VM with PDM installed, the script keeps the existing
+`/etc/nftables.conf`, adds the include once, is idempotent, survives a
+reboot, and blocks 8443 from the management LAN and the perimeter. The lab
+also found that `enable --now` flushed Docker's rules (fixed, see
+CHANGELOG). Original status, for history: the nftables ruleset `scripts/configure-pdm-firewall.sh`
 generates was proven correct with real traffic tests in an isolated
 network namespace (loopback accepted, edge subnet accepted, everything
 else dropped — see `docs/plan/EXECUTION-PLAN.md`'s Verification section).
@@ -75,21 +85,19 @@ monitoring VM, reboot, confirm `nft list ruleset` still shows
 
 ### PDM's OIDC realm-add CLI flags
 
-**Status**: PDM's official docs (checked against PDM 1.1.7) confirm it
-supports an `openid` realm type via its own separate CLI
-(`proxmox-datacenter-manager-admin`, not `pveum`) — see
-[docs/keycloak-integration.md](keycloak-integration.md) step 3b. The exact
-`realm add` flag names weren't in the fetched documentation excerpt.
-
-**Plan**: on the deployed PDM host, run
-`proxmox-datacenter-manager-admin realm add --help`, update step 3b's
-example with the confirmed flags, and verify a login actually redirects
-to Keycloak. If the deployed version doesn't support this after all,
-oauth2-proxy already covers the gap (step 4).
+**Closed by `tests/lab/`** (`t3-pdm-oidc.sh`): the CLI has no realm
+commands at all, so the old step 3b could not work. The realm is created
+through PDM's API (`POST /config/access/openid`), and a full Keycloak
+login returns a PDM ticket. `docs/keycloak-integration.md` step 3b now
+documents the verified API call. PVE's `pveum realm add` example (step 3)
+and the oauth2-proxy flow (step 4) were verified end to end too.
 
 ### Integration smoke test end-to-end
 
-**Status**: `docker compose config` (both compose files), `promtool`, and
+**Closed by `tests/lab/`** (`t0-smoke.sh`): `smoke-test.sh` passes on a
+real Docker daemon. The first run failed and uncovered the
+`compress`/`docker-socket-proxy`/healthcheck bugs listed in the CHANGELOG.
+Original status, for history: `docker compose config` (both compose files), `promtool`, and
 `amtool` were run for real against static binaries downloaded directly
 from their GitHub releases — no daemon needed for config validation, and
 this caught a real Alertmanager config bug (see CHANGELOG's `[0.1.0]`

@@ -55,9 +55,11 @@ sudo wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.g
 
 # No-subscription repo (swap for the enterprise repo if you hold a
 # subscription — see https://pdm.proxmox.com/docs/installation.html)
+# One-line "deb ..." format belongs in a .list file; a .sources file must
+# use the multi-line deb822 format, or apt refuses to parse it.
 echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] \
   http://download.proxmox.com/debian/pdm trixie pdm-no-subscription" | \
-  sudo tee /etc/apt/sources.list.d/proxmox.sources > /dev/null
+  sudo tee /etc/apt/sources.list.d/pdm.list > /dev/null
 
 sudo apt-get update
 sudo apt-get install -y proxmox-datacenter-manager-container-meta

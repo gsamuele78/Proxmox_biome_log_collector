@@ -38,6 +38,11 @@ cat > "${NFT_FILE}" <<EOF
 # A separate base chain at the input hook: nftables evaluates every base
 # chain at a hook independently, so this drop takes effect regardless of
 # what any other table's input chain (e.g. the host's main firewall) does.
+# Declare-then-delete makes re-running this file idempotent: without it,
+# every "nft -f" run appends another copy of the rules to the existing chain.
+table inet proxmox_biome_pdm
+delete table inet proxmox_biome_pdm
+
 table inet proxmox_biome_pdm {
     chain input {
         type filter hook input priority filter; policy accept;
@@ -55,7 +60,13 @@ if [[ -f /etc/nftables.conf ]] && ! grep -q 'nftables.d/\*.nft' /etc/nftables.co
 fi
 
 nft -f "${NFT_FILE}"
-systemctl enable --now nftables.service
+# enable, NOT --now: starting nftables.service loads /etc/nftables.conf,
+# whose Debian default begins with `flush ruleset` — that would wipe the
+# rules Docker installed (NAT/forwarding) and cut every container off the
+# network until dockerd restarts. At boot the order is safe: nftables.service
+# runs before network-pre.target, dockerd adds its rules afterwards.
+systemctl enable nftables.service
 
 echo "PDM (tcp/8443) is now firewalled to loopback + ${EDGE_SUBNET} only."
 echo "Verify with: nft list table inet proxmox_biome_pdm"
+echo "NOTE: never 'systemctl restart nftables' on this host without 'systemctl restart docker' right after (flush ruleset drops Docker's rules)."

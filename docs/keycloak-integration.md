@@ -16,10 +16,14 @@ In your Keycloak admin console, in the realm you'll use for this stack:
 2. Add valid redirect URIs for every service that will authenticate
    directly against Keycloak:
    - `https://grafana.${BASE_DOMAIN}/login/generic_oauth`
-   - `https://pdm.${BASE_DOMAIN}/*` and `https://<pve-node>:8006/*` (PVE's
-     own OIDC callback path — see step 3)
-   - `https://*.${BASE_DOMAIN}/oauth2/callback` (oauth2-proxy, covers
-     every ForwardAuth-protected service in one client)
+   - `https://pdm.${BASE_DOMAIN}/*`, and for each PVE node both
+     `https://<pve-node>:8006` and `https://<pve-node>:8006/*` (PVE sends
+     the bare origin as its redirect URI — see step 3)
+   - `https://<service>.${BASE_DOMAIN}/oauth2/callback` for **each**
+     ForwardAuth-protected hostname (`audit`, `prometheus`,
+     `alertmanager`, `traefik`). Keycloak only accepts a wildcard at the
+     end of a redirect URI, never in the host, so `https://*.${BASE_DOMAIN}/…`
+     does not match anything.
 3. Note the client ID and client secret — these go into `.env`'s
    `KEYCLOAK_CLIENT_ID` / `KEYCLOAK_CLIENT_SECRET`.
 4. Set `KEYCLOAK_ISSUER_URL` in `.env` to
@@ -73,36 +77,35 @@ authentication happens at Keycloak, but PVE's own permission model
 roles/ACLs to autocreated users (or a group they map into via
 `--groups-claim`, PVE 8.4+) before relying on this in production.
 
-## 3b. PDM — native OIDC realm via its own CLI (not `pveum`)
+## 3b. PDM — native OpenID realm via its API (there is no CLI for it)
 
-PDM does **not** share PVE's `pveum` tool — it has its own separate CLI,
-`proxmox-datacenter-manager-admin` (confirmed against
-[pdm.proxmox.com/docs](https://pdm.proxmox.com/docs/), PDM 1.1.7). Its
-"User Configuration" section lists `openid` alongside PAM/LDAP/AD as a
-supported realm type, so native OIDC is available — but the exact
-`realm add` flag names (issuer-url/client-id/client-key equivalents)
-weren't in the fetched documentation excerpt and weren't verified against
-a running instance. Before relying on this:
+PDM supports an `openid` realm, but **`proxmox-datacenter-manager-admin`
+has no `realm` command** (checked on PDM 1.x in `tests/lab`: its command
+list is `acme`, `remote`, `report`, `support-status`, `versions`). Add the
+realm in the web UI (Configuration → Access Control → Authentication
+Realms → Add → OpenID Connect) or through the API, which is what the UI
+calls. As root on the PDM host:
 
 ```bash
-proxmox-datacenter-manager-admin realm add --help
+jar=$(mktemp)
+csrf=$(curl -sk -c "$jar" https://127.0.0.1:8443/api2/json/access/ticket \
+  -d username=root@pam --data-urlencode password='<root password>' \
+  | jq -r .data.CSRFPreventionToken)
+curl -sk -b "$jar" -H "CSRFPreventionToken: $csrf" -X POST \
+  https://127.0.0.1:8443/api2/json/config/access/openid \
+  -d realm=keycloak --data-urlencode "issuer-url=${KEYCLOAK_ISSUER_URL}" \
+  -d client-id="${KEYCLOAK_CLIENT_ID}" -d client-key="${KEYCLOAK_CLIENT_SECRET}" \
+  -d username-claim=preferred_username -d autocreate=true
+rm -f "$jar"
 ```
 
-on the actual deployed PDM host, to confirm the current flag names, then
-adjust the example below accordingly (this is intentionally left as a
-verify-on-deploy step rather than a copy-pasted guess):
-
-```bash
-# EXAMPLE — confirm flags with --help above before running.
-proxmox-datacenter-manager-admin realm add keycloak \
-  --type openid \
-  --issuer-url "${KEYCLOAK_ISSUER_URL}" \
-  --client-id "${KEYCLOAK_CLIENT_ID}" \
-  --client-key "${KEYCLOAK_CLIENT_SECRET}"
-```
-
-If the deployed PDM version turns out not to support this after all,
-route it through oauth2-proxy instead (step 4).
+PDM's ticket arrives as an HttpOnly cookie (`__Host-PDMAuthCookie`), not
+in the JSON body, hence the cookie jar. `tests/e2e/t3-pdm-oidc.sh` runs
+exactly this and then completes a full login (Keycloak form, authorization
+code, `POST /access/openid/login`), which returns a ticket for
+`<user>@keycloak`. Add `https://pdm.${BASE_DOMAIN}/` to the Keycloak
+client's redirect URIs. As with PVE, autocreated users have no privileges
+until you grant them ACLs.
 
 ## 4. oauth2-proxy — everything else
 

@@ -42,7 +42,7 @@ jobs:
       - name: shellcheck
         run: |
           shopt -s globstar
-          shellcheck scripts/**/*.sh tests/integration/*.sh
+          shellcheck -x scripts/**/*.sh tests/integration/*.sh tests/e2e/*.sh tests/lab/*.sh tests/lab/provision/*.sh
 
   markdownlint:
     runs-on: ubuntu-latest

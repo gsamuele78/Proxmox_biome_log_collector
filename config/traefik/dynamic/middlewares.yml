@@ -35,6 +35,9 @@ http:
     oauth2-proxy-auth:
       forwardAuth:
         address: "http://oauth2-proxy:4180/"
+        # oauth2-proxy only answers with tiny redirects/202s; cap what
+        # Traefik will buffer from the auth server.
+        maxResponseBodySize: 65536
         trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-User
@@ -48,4 +51,6 @@ http:
         period: 1s
 
     compress:
-      compression: {}
+      # Traefik v3's key is `compress`; `compression` is rejected and makes
+      # the whole file fail to load (every @file middleware disappears).
+      compress: {}
