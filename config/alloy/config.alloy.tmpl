@@ -39,7 +39,10 @@ loki.source.journal "read" {
 // Proxmox VE firewall log — NIS2 traceability (network segmentation control
 // evidence). See docs/hardening.md's control-mapping table.
 local.file_match "pve_firewall" {
-	path_targets = [{"__path__" = "/var/log/pve-firewall.log", job = "pve-firewall"}]
+	// `host` matches the journal source's label, so every stream can be
+	// filtered per node in Grafana — without it, firewall/audit lines from
+	// all nodes are indistinguishable.
+	path_targets = [{"__path__" = "/var/log/pve-firewall.log", job = "pve-firewall", host = constants.hostname}]
 }
 
 loki.source.file "pve_firewall" {
@@ -50,7 +53,7 @@ loki.source.file "pve_firewall" {
 // auditd — NIS2 traceability (access-control / incident-detection evidence).
 // Requires scripts/node-setup/configure-auditd.sh to have run first.
 local.file_match "auditd" {
-	path_targets = [{"__path__" = "/var/log/audit/audit.log", job = "auditd"}]
+	path_targets = [{"__path__" = "/var/log/audit/audit.log", job = "auditd", host = constants.hostname}]
 }
 
 loki.source.file "auditd" {

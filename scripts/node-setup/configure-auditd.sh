@@ -44,12 +44,32 @@ cat > "${rules_file}" <<'EOF'
 # -a always,exit -F arch=b64 -S execve -F euid=0 -k root_actions
 EOF
 
+# auditd writes audit.log as root:root 0600 by default, which the Alloy
+# agent (runs as the unprivileged `alloy` user) cannot read — the auditd
+# stream would silently never reach Loki. Make the log group-readable by
+# `adm`; install-alloy-agent.sh adds `alloy` to that group.
+echo "[auditd] Setting log_group = adm in /etc/audit/auditd.conf..."
+if grep -qE '^[[:space:]]*log_group[[:space:]]*=' /etc/audit/auditd.conf; then
+  sed -i -E 's/^[[:space:]]*log_group[[:space:]]*=.*/log_group = adm/' /etc/audit/auditd.conf
+else
+  echo 'log_group = adm' >> /etc/audit/auditd.conf
+fi
+
 echo "[auditd] Loading rules..."
 augenrules --load
 
 echo "[auditd] Enabling and restarting service..."
 systemctl enable --now auditd
-systemctl restart auditd
+# Debian's auditd.service sets RefuseManualStop=yes, so `systemctl restart
+# auditd` is refused (and would abort this script under `set -e`). Ask the
+# daemon to re-read auditd.conf instead.
+auditctl --signal reload
+
+# log_group only governs files auditd opens from now on; fix the current
+# log and the directory (0700 root by default, not traversable by `adm`).
+chgrp adm /var/log/audit /var/log/audit/audit.log
+chmod 0750 /var/log/audit
+chmod 0640 /var/log/audit/audit.log
 
 echo "[auditd] Done. Verify with: auditctl -l"
 echo "[auditd] Alloy (once installed via install-alloy-agent.sh) ships /var/log/audit/audit.log to Loki under job=auditd."

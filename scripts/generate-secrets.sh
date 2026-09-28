@@ -58,14 +58,24 @@ fi
 # string form (see config/traefik/dynamic/middlewares.yml) — keep both in
 # sync from the single .env source of truth.
 htpasswd_users="$(grep -E '^TRAEFIK_BASIC_AUTH_USERS=' "${env_file}" | cut -d= -f2- | sed 's/\$\$/\$/g')"
-printf '%s\n' "${htpasswd_users}" > "${repo_root}/config/traefik/dynamic/.htpasswd"
-chmod 600 "${repo_root}/config/traefik/dynamic/.htpasswd"
+htpasswd_file="${repo_root}/config/traefik/dynamic/.htpasswd"
+(umask 077 && printf '%s\n' "${htpasswd_users}" > "${htpasswd_file}")
+# Traefik runs as uid 0 inside its container but with every capability
+# dropped (no CAP_DAC_OVERRIDE), so it can read a 600 file only if the file
+# is owned by uid 0 on the host too.
+if [[ "${EUID}" -eq 0 ]]; then
+  chown root:root "${htpasswd_file}"
+  chmod 600 "${htpasswd_file}"
+else
+  chmod 644 "${htpasswd_file}"
+  echo "Note: not running as root, so .htpasswd is 644 (bcrypt hashes only) so Traefik can read it; re-run as root for 600."
+fi
 echo "Wrote config/traefik/dynamic/.htpasswd"
 
 cat <<'EOF'
 
 Still need to be filled in manually (real infra values, not generatable):
-  PVE_API_HOST, PVE_API_TOKEN_ID, PVE_API_TOKEN_SECRET
+  PVE_API_TOKEN_ID, PVE_API_TOKEN_SECRET
   CV4PVE_DIAG_HOSTS, CV4PVE_EXPORTER_HOSTS
   ALERTMANAGER_SMTP_* / ALERTMANAGER_RECEIVER_EMAIL
   KEYCLOAK_* (Phase 2 only — leave blank until your realm/client exist)

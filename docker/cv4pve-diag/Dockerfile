@@ -35,11 +35,18 @@ WORKDIR /build
 RUN curl -fsSL -o cv4pve-diag.deb "${CV4PVE_DEB_URL}" \
     && echo "${CV4PVE_DEB_SHA256}  cv4pve-diag.deb" | sha256sum -c - \
     && dpkg-deb -x cv4pve-diag.deb /build/extracted \
-    && install -m 0755 -o root -g root /build/extracted/usr/bin/cv4pve-diag /build/cv4pve-diag
+    && install -m 0755 -o root -g root /build/extracted/usr/bin/cv4pve-diag /build/cv4pve-diag \
+    && mkdir -p /build/reports
 
 FROM gcr.io/distroless/cc-debian12:nonroot
 
 COPY --from=builder --chown=nonroot:nonroot /build/cv4pve-diag /usr/bin/cv4pve-diag
+# Mount point for the cv4pve-diag-reports named volume. It must exist in the
+# image and be owned by nonroot: Docker copies a mount point's ownership onto
+# an empty named volume, and without this the volume is root-owned and the
+# nonroot process cannot write its report (distroless has no shell to fix it
+# at runtime).
+COPY --from=builder --chown=nonroot:nonroot /build/reports /reports
 
 USER nonroot
 ENTRYPOINT ["/usr/bin/cv4pve-diag"]

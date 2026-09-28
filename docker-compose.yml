@@ -3,7 +3,9 @@
 ##   pinned image tags, cap_drop: [ALL] + minimal re-adds, no-new-privileges,
 ##   read_only root fs + explicit tmpfs/volumes, non-root user where the
 ##   upstream image supports it, resource limits, healthchecks, log rotation,
-##   restart: unless-stopped, no host ports published except Traefik 80/443.
+##   restart: unless-stopped, no host ports published except Traefik 80/443
+##   and Loki's 3100 log-ingest port (bound to LOKI_BIND_ADDR — the
+##   management-LAN interface — so PVE nodes' Alloy agents can push logs).
 ##
 ## Two internal networks: `edge` (Traefik + docker-socket-proxy + anything
 ## Traefik proxies to) and `backend` (Prometheus/Loki/Alertmanager/exporters).
@@ -93,6 +95,10 @@ services:
       # TRAEFIK_* env var is how ACME_EMAIL actually reaches the ACME resolver.
       # See config/traefik/traefik.yml.
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: "${ACME_EMAIL}"
+      # Read by the file provider's Go templating ({{ env "BASE_DOMAIN" }})
+      # in config/traefik/dynamic/pdm.yml — the file provider does NOT
+      # expand ${VAR} syntax.
+      BASE_DOMAIN: "${BASE_DOMAIN}"
     extra_hosts:
       # Lets Traefik reach the natively-installed PDM on the host — see
       # ADR-0003, config/traefik/dynamic/pdm.yml, and
@@ -239,11 +245,13 @@ services:
     # argv is built here by `docker compose`'s OWN interpolation (reading
     # .env), then passed to the binary as a fixed exec-form array. See
     # docker/cv4pve-metrics-exporter/Dockerfile and ADR-0007.
+    # --host/--api-token/--settings-file are root-level options, so they go
+    # before the `run` subcommand (upstream's documented argument order).
     command:
-      - run
-      - --settings-file=/etc/cv4pve/settings.json
       - --host=${CV4PVE_EXPORTER_HOSTS}
       - --api-token=${PVE_API_TOKEN_ID}=${PVE_API_TOKEN_SECRET}
+      - --settings-file=/etc/cv4pve/settings.json
+      - run
     networks:
       - backend
     read_only: true
@@ -271,13 +279,21 @@ services:
     volumes:
       - ./config/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki-data:/loki
+    # The ONE non-Traefik published port: PVE nodes' Alloy agents push logs
+    # here over the management LAN (docs/network-port-matrix.md, zone 2).
+    # Bind it to the monitoring VM's management-LAN address via
+    # LOKI_BIND_ADDR so it is never exposed on the perimeter-facing NIC.
+    ports:
+      - "${LOKI_BIND_ADDR:-0.0.0.0}:3100:3100"
     networks:
       - backend
     read_only: true
     tmpfs:
       - /tmp
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:3100/ready || exit 1"]
+      # Loki 3.x ships on distroless/static (no shell, no wget) — use the
+      # binary's own built-in probe against /ready instead.
+      test: ["CMD", "/usr/bin/loki", "-health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -344,13 +360,15 @@ services:
     # scripts/run-cv4pve-diag.sh) overrides this with a timestamped
     # --output-file instead — see that script. Same shell-less-image
     # reasoning as cv4pve-metrics-exporter above.
+    # All of these are root-level options, so they precede the `execute`
+    # subcommand (upstream's documented argument order).
     command:
-      - execute
       - --host=${CV4PVE_DIAG_HOSTS}
       - --api-token=${PVE_API_TOKEN_ID}=${PVE_API_TOKEN_SECRET}
       - --compliance=Nis2
-      - -o=Html
+      - --output=Html
       - --output-file=/reports/latest.html
+      - execute
     volumes:
       - cv4pve-diag-reports:/reports
     networks:
@@ -400,7 +418,9 @@ services:
   # ---------------------------------------------------------------------------
 
   oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.3
+    # -alpine flavour: the default tag is distroless (no wget), which would
+    # make the healthcheck below fail forever.
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.3-alpine
     profiles:
       - keycloak
     <<: *default-hardening
@@ -415,6 +435,15 @@ services:
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
       OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      # ForwardAuth mode: no real upstream — answer 202 when the session is
+      # valid, redirect to Keycloak otherwise. See the oauth2-proxy-auth
+      # middleware in config/traefik/dynamic/middlewares.yml.
+      OAUTH2_PROXY_UPSTREAMS: "static://202"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      # One session cookie for every *.BASE_DOMAIN service, and allow
+      # post-login redirects back to any of them.
+      OAUTH2_PROXY_COOKIE_DOMAINS: ".${BASE_DOMAIN}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ".${BASE_DOMAIN}"
     networks:
       - edge
     read_only: true
@@ -430,3 +459,15 @@ services:
         limits:
           cpus: "0.2"
           memory: 64M
+    labels:
+      # oauth2-proxy's own endpoints (/oauth2/start, /oauth2/callback, ...)
+      # must be reachable on EVERY protected hostname, or the Keycloak
+      # callback lands on the protected backend instead and login loops.
+      # High priority so it wins over each service's Host() router.
+      - "traefik.enable=true"
+      - "traefik.http.routers.oauth2-proxy.rule=PathPrefix(`/oauth2/`)"
+      - "traefik.http.routers.oauth2-proxy.priority=1000"
+      - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
+      - "traefik.http.routers.oauth2-proxy.tls=true"
+      - "traefik.http.routers.oauth2-proxy.middlewares=security-headers@file"
+      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"

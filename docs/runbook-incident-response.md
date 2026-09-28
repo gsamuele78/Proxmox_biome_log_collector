@@ -32,7 +32,7 @@ not the process itself.
    access — this monitoring VM observes and alerts, it doesn't act on the
    cluster.
 5. **Compliance evidence** — `cv4pve-diag`'s reports
-   (`https://audit.${BASE_DOMAIN}/reports/`) and Loki's retained audit
+   (`https://audit.${BASE_DOMAIN}/`) and Loki's retained audit
    logs are the evidentiary record referenced in the notification below.
 
 ## NIS2 notification timeline
@@ -63,4 +63,4 @@ notification is written from.
 - **Compliance snapshots**: `cv4pve-diag` reports, daily
   (`scripts/systemd/cv4pve-diag.timer`), retained in the
   `cv4pve-diag-reports` Docker volume and served at
-  `https://audit.${BASE_DOMAIN}/reports/`.
+  `https://audit.${BASE_DOMAIN}/`.

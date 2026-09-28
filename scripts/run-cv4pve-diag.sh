@@ -24,12 +24,14 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 report_file="/reports/cv4pve-diag-${timestamp}.html"
 
 echo "[cv4pve-diag] Running compliance scan -> ${report_file}"
+# Root-level options first, then the `execute` subcommand (upstream's
+# documented argument order).
 docker compose run --rm --no-deps cv4pve-diag \
-  execute \
   --host="${CV4PVE_DIAG_HOSTS:?Set CV4PVE_DIAG_HOSTS in .env}" \
   --api-token="${PVE_API_TOKEN_ID:?Set PVE_API_TOKEN_ID in .env}=${PVE_API_TOKEN_SECRET:?Set PVE_API_TOKEN_SECRET in .env}" \
   --compliance=Nis2 \
   --output=Html \
-  --output-file="${report_file}"
+  --output-file="${report_file}" \
+  execute
 
 echo "[cv4pve-diag] Report written. Available at https://audit.${BASE_DOMAIN}/$(basename "${report_file}")"

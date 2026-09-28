@@ -18,8 +18,7 @@ inbound from an admin's browser or VPN client:
 | 443  | TCP      | HTTPS — Traefik, every routed service multiplexed by hostname    |
 
 Nothing else is ever exposed on the monitoring VM's external-facing
-interface. Grafana (3000), Prometheus (9090), Alertmanager (9093), Loki
-(3100), the Traefik dashboard (8080 internal), PDM (8443), PegaProx
+interface. Grafana (3000), Prometheus (9090), Alertmanager (9093), the Traefik dashboard (8080 internal), PDM (8443), PegaProx
 (5000-5002), and every exporter port are reached exclusively through
 Traefik on 443, host-routed by name (`grafana.${BASE_DOMAIN}`,
 `prometheus.${BASE_DOMAIN}`, `pdm.${BASE_DOMAIN}`, `audit.${BASE_DOMAIN}`,
@@ -44,13 +43,14 @@ management network/VLAN, using each service's normal port:
 
 | Port | Where              | Purpose                                                              |
 | ---- | ------------------ | ----------------------------------------------------------------------- |
-| 8080 | Traefik container   | Internal `ping`/API entrypoint — not bound to any host port             |
+| 8080 | Traefik container   | Internal `ping`/`metrics` entrypoint — not bound to any host port             |
 | 2375 | docker-socket-proxy | Scoped Docker API access for Traefik's Docker provider (`edge` network) |
 | 8443 | Host, nftables-restricted to loopback + `172.28.0.0/24` (edge) | PDM, natively installed. Binds `0.0.0.0:8443` at the app level (no configurable listen address exists) — isolation is enforced by `scripts/configure-pdm-firewall.sh`, not by an app-level bind. See ADR-0003. |
 | 9090 | `backend` network   | Prometheus's own UI/API (reached via Traefik, not directly)             |
 | 9093 | `backend` network   | Alertmanager's own UI/API (reached via Traefik, not directly)           |
 | 8080 | `backend`+`edge`    | audit-report-server (nginx, reached via Traefik, not directly)          |
 | 9221 | `backend` network   | cv4pve-metrics-exporter's Prometheus metrics endpoint                   |
+| 3100 | Host, `LOKI_BIND_ADDR` | Loki push/query API — the one non-Traefik published port, so PVE nodes' Alloy agents can push (zone 2). Set `LOKI_BIND_ADDR` to the management-LAN IP so it is never bound on the perimeter-facing interface. |
 
 ## Why this resolves the original port-blocking problem
 

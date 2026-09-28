@@ -20,7 +20,7 @@ docker compose version >/dev/null 2>&1 || { echo "docker compose plugin not foun
 if [[ ! -f .env ]]; then
   log ".env not found — copying from .env.example (edit it before continuing, or re-run after)"
   cp .env.example .env
-  log "Created .env — fill in PVE_API_HOST, PVE_API_TOKEN_ID/SECRET, BASE_DOMAIN, ACME_EMAIL, etc., then re-run this script."
+  log "Created .env — fill in BASE_DOMAIN, ACME_EMAIL, PVE_API_TOKEN_ID/SECRET, CV4PVE_*_HOSTS, etc., then re-run this script."
   exit 0
 fi
 
@@ -29,7 +29,7 @@ set -a
 source .env
 set +a
 
-required_vars=(BASE_DOMAIN ACME_EMAIL PVE_API_HOST PVE_API_TOKEN_ID PVE_API_TOKEN_SECRET)
+required_vars=(BASE_DOMAIN ACME_EMAIL PVE_API_TOKEN_ID PVE_API_TOKEN_SECRET CV4PVE_DIAG_HOSTS CV4PVE_EXPORTER_HOSTS ALERTMANAGER_SMTP_SMARTHOST ALERTMANAGER_RECEIVER_EMAIL)
 missing=0
 for var in "${required_vars[@]}"; do
   if [[ -z "${!var:-}" || "${!var}" == *CHANGEME* ]]; then
@@ -49,8 +49,19 @@ log "Ensuring generated secrets (passwords, htpasswd file) are present..."
 scripts/generate-secrets.sh
 
 log "Rendering config/alertmanager/alertmanager.yml from template..."
-envsubst < config/alertmanager/alertmanager.yml.tmpl > config/alertmanager/alertmanager.yml
-chmod 600 config/alertmanager/alertmanager.yml
+am_config=config/alertmanager/alertmanager.yml
+(umask 077 && envsubst < config/alertmanager/alertmanager.yml.tmpl > "${am_config}")
+# The alertmanager container runs as nobody (65534) with all capabilities
+# dropped, so it can only read the bind-mounted file through its group or
+# "other" bits — a 600 file owned by the host user is unreadable to it and
+# Alertmanager fails to start.
+if [[ "${EUID}" -eq 0 ]]; then
+  chown root:65534 "${am_config}"
+  chmod 640 "${am_config}"
+else
+  chmod 644 "${am_config}"
+  log "WARNING: not running as root, so ${am_config} (contains SMTP credentials) is left world-readable (644) for the container's nobody user. Re-run as root to tighten it to root:65534 640."
+fi
 
 for f in config/prometheus/targets/proxmox-nodes.json config/prometheus/targets/ceph-mgr.json; do
   if [[ ! -f "${f}" ]]; then
@@ -61,7 +72,9 @@ done
 
 log "Pulling/building images..."
 docker compose pull --ignore-buildable
-docker compose build
+# --profile tools so the one-shot cv4pve-diag image is built up front
+# rather than lazily on the systemd timer's first run.
+docker compose --profile tools build
 
 log "Starting core stack..."
 docker compose up -d

@@ -1,0 +1,56 @@
+## Self-monitoring: the stack alerting on its own blind spots. A silent
+## exporter or a dead Loki means missing evidence, not "all clear".
+
+groups:
+  - name: monitoring-stack
+    rules:
+      - alert: Cv4pveMetricsExporterDown
+        expr: up{job="cv4pve-metrics-exporter"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cv4pve-metrics-exporter is not being scraped"
+          description: >-
+            Prometheus cannot scrape cv4pve-metrics-exporter (distroless, no
+            container healthcheck — this alert IS its health signal). VM/LXC/
+            storage object metrics are missing. Check
+            `docker compose logs cv4pve-metrics-exporter` for PVE API token or
+            connectivity errors.
+
+      - alert: MonitoringStackTargetDown
+        expr: up{job=~"monitoring-vm-node|alertmanager|loki|grafana|traefik"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Monitoring stack component {{ $labels.job }} is down"
+          description: >-
+            {{ $labels.job }} ({{ $labels.instance }}) has not answered a
+            scrape for 5m. Run `docker compose ps` on the monitoring VM.
+
+      - alert: CephMgrExporterAbsent
+        expr: absent(up{job="ceph-mgr-prometheus"} == 1)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No Ceph mgr is serving Prometheus metrics"
+          description: >-
+            None of the targets in config/prometheus/targets/ceph-mgr.json is
+            answering, so every ceph_* alert is blind. Standby mgrs are
+            expected to be down; this fires only when no mgr answers at all.
+
+      - alert: LokiRequestErrors
+        expr: >-
+          sum(rate(loki_request_duration_seconds_count{status_code=~"5.."}[5m]))
+          / sum(rate(loki_request_duration_seconds_count[5m])) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki is failing more than 5% of requests"
+          description: >-
+            Log pushes from the PVE nodes' Alloy agents may be dropped —
+            this is audit-trail evidence (auditd, pve-firewall). Check
+            `docker compose logs loki` and the loki-data volume's free space.

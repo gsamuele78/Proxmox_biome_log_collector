@@ -12,14 +12,20 @@ api:
   insecure: false
 
 ## Backs the `traefik healthcheck` CLI command used by docker-compose's
-## HEALTHCHECK for this service. Bound to localhost:8080 inside the container
-## only — never exposed via an entrypoint/router, so it never leaves the
-## container network namespace.
+## HEALTHCHECK for this service. Served on the internal `traefik` entrypoint
+## (:8080), which is never published as a host port — reachable only from
+## containers on the `monitoring-edge` network.
 ping:
   entryPoint: traefik
 
+## Prometheus metrics on the same internal entrypoint, scraped by the
+## `traefik` job in config/prometheus/prometheus.yml over monitoring-edge.
+metrics:
+  prometheus:
+    entryPoint: traefik
+
 entryPoints:
-  ## Internal-only: backs `ping`/`api`. Not published in docker-compose.yml's
+  ## Internal-only: backs `ping`/`metrics`. Not published in docker-compose.yml's
   ## `ports:` list, so it's unreachable outside the container network.
   traefik:
     address: ":8080"
@@ -60,8 +66,8 @@ accessLog:
       - "400-599"
 
 ## `acme.email` is deliberately NOT set here: Traefik's static config file does
-## NOT support ${VAR} substitution (unlike the dynamic file provider or
-## docker-compose.yml). It's supplied instead via the native
+## NOT support ${VAR} substitution (unlike docker-compose.yml; the dynamic
+## file provider uses Go templates instead — see dynamic/pdm.yml). It's supplied instead via the native
 ## TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL environment variable
 ## on the traefik service in docker-compose.yml. See
 ## https://doc.traefik.io/traefik/reference/static-configuration/env/

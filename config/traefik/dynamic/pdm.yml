@@ -23,7 +23,10 @@
 http:
   routers:
     pdm:
-      rule: "Host(`pdm.${BASE_DOMAIN}`)"
+      # Traefik's file provider does not expand ${VAR}; it renders Go
+      # templates. BASE_DOMAIN is passed to the traefik container's
+      # environment in docker-compose.yml for exactly this line.
+      rule: 'Host(`pdm.{{ env "BASE_DOMAIN" }}`)'
       entryPoints:
         - websecure
       service: pdm

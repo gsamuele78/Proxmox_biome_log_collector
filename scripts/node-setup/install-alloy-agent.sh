@@ -45,6 +45,14 @@ mkdir -p /etc/alloy
 sed "s#__LOKI_PUSH_URL__#${LOKI_PUSH_URL}#g" "${template}" > /etc/alloy/config.alloy
 chmod 640 /etc/alloy/config.alloy
 
+# The packaged service runs as the unprivileged `alloy` user. It needs
+# `systemd-journal` to read the journal and `adm` to read
+# /var/log/pve-firewall.log and /var/log/audit/audit.log (see
+# configure-auditd.sh's log_group). Idempotent: usermod -aG is a no-op if
+# already a member.
+echo "[alloy] Granting alloy read access to journal and adm-group logs..."
+usermod -aG adm,systemd-journal alloy
+
 echo "[alloy] Enabling and starting service..."
 systemctl enable --now alloy
 systemctl restart alloy

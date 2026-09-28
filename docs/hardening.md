@@ -29,8 +29,10 @@ YAML anchor unless a specific exception is documented below:
 - **`restart: unless-stopped`** and log rotation (`json-file`, 10 MB × 3
   files) on every service, so a crash-looping or noisy container can't
   fill the host's disk.
-- **No host ports published** except Traefik's 80/443 — every other
-  service is reachable only via the internal Docker networks. See
+- **No host ports published** except Traefik's 80/443 and Loki's 3100
+  log-ingest port (bound to `LOKI_BIND_ADDR`, the management-LAN address,
+  so PVE nodes can push logs) — every other service is reachable only via
+  the internal Docker networks. See
   `docs/network-port-matrix.md`.
 
 ## Network segmentation
@@ -57,7 +59,7 @@ undo the actual security benefit of the distroless base — see ADR-0007's
 - `cv4pve-metrics-exporter`'s liveness is Prometheus's own
   `up{job="cv4pve-metrics-exporter"}` scrape-success metric — if the
   exporter is down or unreachable, this flips to `0` and
-  `config/prometheus/rules/proxmox.rules.yml` alerts on it the same way it
+  `config/prometheus/rules/monitoring.rules.yml` (`Cv4pveMetricsExporterDown`) alerts on it the same way it
   would for any other down target.
 - `cv4pve-diag` is a one-shot job (`profiles: [tools]`, run by
   `scripts/systemd/cv4pve-diag.timer`), not a long-running service — its

@@ -28,9 +28,13 @@ http:
     ## Phase 2 (steady-state) auth: forwardAuth to the oauth2-proxy service,
     ## which validates the session against Keycloak OIDC. Used for services
     ## with no native OIDC support (PDM, cv4pve-diag static reports).
+    ## Address is oauth2-proxy's root, not /oauth2/auth: with
+    ## OAUTH2_PROXY_UPSTREAMS=static://202 the root answers 202 for a valid
+    ## session and 302-redirects the browser to Keycloak otherwise, whereas
+    ## /oauth2/auth only returns a bare 401 (no login redirect).
     oauth2-proxy-auth:
       forwardAuth:
-        address: "http://oauth2-proxy:4180/oauth2/auth"
+        address: "http://oauth2-proxy:4180/"
         trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-User

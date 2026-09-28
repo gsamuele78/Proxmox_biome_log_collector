@@ -38,9 +38,16 @@ RUN curl -fsSL -o cv4pve-metrics-exporter.deb "${CV4PVE_DEB_URL}" \
 # container's own network namespace, not the Docker bridge). No PVE
 # credentials live in this file; those are passed via --api-token at
 # container start (see docker-compose.yml).
+#
+# "+" (not "0.0.0.0"): the exporter serves through prometheus-net's
+# MetricServer, i.e. .NET's HttpListener, which matches the request's Host
+# header against the prefix host. A literal "0.0.0.0" prefix binds every
+# interface but then rejects requests addressed to
+# `cv4pve-metrics-exporter:9221` with 400; "+" is HttpListener's
+# all-hosts wildcard (and prometheus-net's own default).
 RUN /build/cv4pve-metrics-exporter create-settings --full -o /build/settings.json \
-    && sed -i 's/"Host": "localhost"/"Host": "0.0.0.0"/' /build/settings.json \
-    && grep -q '"Host": "0.0.0.0"' /build/settings.json
+    && sed -i 's/"Host": "localhost"/"Host": "+"/' /build/settings.json \
+    && grep -q '"Host": "+"' /build/settings.json
 
 FROM gcr.io/distroless/cc-debian12:nonroot
 

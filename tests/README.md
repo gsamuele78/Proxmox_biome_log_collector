@@ -50,9 +50,12 @@ tests/integration/smoke-test.sh
 ```
 
 Brings the core stack up with a throwaway `.env`, waits for container
-healthchecks, curls a Traefik-routed path, checks Prometheus's own
-`/api/v1/targets` reports registered scrape jobs, then tears everything
-down. It does **not** test against real Proxmox/Ceph nodes — there are none
+healthchecks, checks the distroless cv4pve-diag binary starts, curls a
+Traefik-routed path and Loki's host-published ingest port, waits until
+every in-stack Prometheus scrape job (self, node-exporter, Alertmanager,
+Loki, Grafana, Traefik) is `up`, then tears everything down. It refuses to
+run if `.env` already exists, because teardown is `docker compose down -v`:
+run it from a clean checkout, never from a live deployment's directory. It does **not** test against real Proxmox/Ceph nodes — there are none
 in CI — so PVE/Ceph-specific scrape targets and cv4pve API calls are outside
 its scope. See `docs/deployment-guide.md` for how to validate those against
 real hardware.

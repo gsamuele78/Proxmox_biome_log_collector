@@ -32,7 +32,8 @@ jobs:
       - name: promtool check rules
         run: |
           docker run --rm -v "$PWD/config/prometheus:/config:ro" prom/prometheus:v3.13.2 \
-            promtool check rules /config/rules/proxmox.rules.yml /config/rules/ceph.rules.yml
+            promtool check rules /config/rules/proxmox.rules.yml /config/rules/ceph.rules.yml \
+            /config/rules/monitoring.rules.yml
 
   amtool:
     runs-on: ubuntu-latest
@@ -40,9 +41,9 @@ jobs:
       - uses: actions/checkout@v5
       - name: Render alertmanager.yml from template with dummy values
         run: |
-          export ALERTMANAGER_SMTP_HOST=smtp.invalid:587
+          export ALERTMANAGER_SMTP_SMARTHOST=smtp.invalid:587
           export ALERTMANAGER_SMTP_FROM=alerts@smoketest.internal
-          export ALERTMANAGER_SMTP_USER=smoketest
+          export ALERTMANAGER_SMTP_USERNAME=smoketest
           export ALERTMANAGER_SMTP_PASSWORD=smoketest
           export ALERTMANAGER_RECEIVER_EMAIL=oncall@smoketest.internal
           envsubst < config/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml
@@ -56,4 +57,6 @@ jobs:
     needs: [compose-config, promtool, amtool]
     steps:
       - uses: actions/checkout@v5
+      - name: Install htpasswd (used by scripts/generate-secrets.sh)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq apache2-utils
       - run: tests/integration/smoke-test.sh

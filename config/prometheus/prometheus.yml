@@ -43,8 +43,28 @@ scrape_configs:
           - /etc/prometheus/targets/ceph-mgr.json
         refresh_interval: 5m
 
-  ## Self-monitoring of this VM's own Docker stack.
-  - job_name: docker-socket-proxy
+  ## Self-monitoring of the monitoring VM and its own Docker stack. (No
+  ## docker-socket-proxy job: it only proxies a scoped subset of the Docker
+  ## API and has no /metrics endpoint of its own — scraping it just
+  ## produced a permanently-down target.)
+  - job_name: monitoring-vm-node
     static_configs:
-      - targets: ["docker-socket-proxy:2375"]
-    metrics_path: /metrics
+      - targets: ["node-exporter:9100"]
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: ["alertmanager:9093"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  ## Traefik's internal `traefik` entrypoint (:8080, never host-published),
+  ## reached over monitoring-edge — see config/traefik/traefik.yml.
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8080"]

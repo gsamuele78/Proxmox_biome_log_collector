@@ -6,6 +6,67 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Loki was unreachable from the PVE nodes: port 3100 was never published,
+  so no Alloy agent could push logs. It is now published on
+  `LOKI_BIND_ADDR` (new `.env` variable, set it to the management-LAN IP).
+- Loki's healthcheck used `wget`, which the distroless Loki 3.x image does
+  not have, so the container never became healthy. It now uses `loki -health`.
+- oauth2-proxy's default image is distroless too (same `wget` healthcheck
+  problem); switched to the `-alpine` tag. ForwardAuth also could not log
+  anyone in: no `static://202` upstream, the middleware pointed at
+  `/oauth2/auth` (bare 401, no redirect to Keycloak), and no router carried
+  `/oauth2/callback` back to oauth2-proxy. All three are fixed, and the
+  session cookie is scoped to `.${BASE_DOMAIN}`.
+- The PDM router's rule was the literal string `pdm.${BASE_DOMAIN}`:
+  Traefik's file provider does not expand `${VAR}`. It now uses
+  `{{ env "BASE_DOMAIN" }}`, with `BASE_DOMAIN` passed to the container.
+- cv4pve-metrics-exporter listened on `0.0.0.0`, which .NET's HttpListener
+  treats as a literal Host-header match, so Prometheus's requests to
+  `cv4pve-metrics-exporter:9221` were rejected. Now uses the `+` wildcard.
+- cv4pve-diag could not write reports: the named volume was root-owned and
+  the image runs as nonroot. The image now ships a nonroot-owned `/reports`.
+- Root-level cv4pve options now come before the `execute`/`run` subcommand,
+  matching upstream's documented usage.
+- The rendered `alertmanager.yml` was `chmod 600` for the host user, which
+  the `nobody` Alertmanager process cannot read. `.htpasswd` had the same
+  problem for Traefik (root in the container but without
+  `CAP_DAC_OVERRIDE`). Both scripts now set ownership that works.
+- CI's `amtool` job and the smoke test set `ALERTMANAGER_SMTP_HOST`/`_USER`,
+  but the template reads `_SMARTHOST`/`_USERNAME`, so the config was
+  checked with an empty smarthost.
+- The Trivy image scan never scanned cv4pve-diag: it lives in the `tools`
+  profile, which plain `docker compose build` skips.
+- The smoke test overwrote and then deleted any existing `.env` and ended
+  with `down -v`. It now refuses to run where `.env` exists and only
+  removes the files it created. CI installs `htpasswd`, which
+  `generate-secrets.sh` needs.
+- Alloy could not read `/var/log/audit/audit.log` (root 0600). auditd now
+  uses `log_group = adm` and `alloy` is added to `adm`/`systemd-journal`.
+  `configure-auditd.sh` no longer calls `systemctl restart auditd`, which
+  Debian refuses (`RefuseManualStop=yes`).
+- pve-firewall and auditd log streams now carry a `host` label; without it,
+  lines from different nodes could not be told apart.
+- Audit report URLs in the docs pointed at `/reports/…`; nginx serves the
+  reports at the site root.
+
+### Changed
+
+- Dropped the `docker-socket-proxy` scrape job: it has no `/metrics` and was
+  permanently down. Added self-monitoring jobs for the monitoring VM's own
+  node-exporter (previously deployed but never scraped), Alertmanager,
+  Loki, Grafana and Traefik (metrics enabled on the internal entrypoint).
+- New `config/prometheus/rules/monitoring.rules.yml`:
+  `Cv4pveMetricsExporterDown` (docs/hardening.md already claimed this
+  alert existed), `MonitoringStackTargetDown`, `CephMgrExporterAbsent`,
+  `LokiRequestErrors`.
+- Removed the unused `PVE_API_HOST` and `CV4PVE_DIAG_SCHEDULE_CRON`
+  variables. Bootstrap now requires the variables the stack actually reads
+  (`CV4PVE_*_HOSTS`, SMTP smarthost and receiver).
+- The smoke test now also checks Loki's host port, the cv4pve-diag binary,
+  and that every in-stack scrape job is `up`.
+
 ## [0.1.0] - 2026-07-31
 
 Initial production-grade build, replacing the raw research transcript

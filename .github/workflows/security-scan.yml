@@ -42,7 +42,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Build custom images
-        run: docker compose build
+        # cv4pve-diag sits in the `tools` profile; without --profile it is
+        # skipped and the scan below has no image to scan.
+        run: |
+          cp .env.example .env
+          docker compose --profile tools build
       - name: Scan cv4pve-metrics-exporter image
         uses: aquasecurity/trivy-action@v0.36.0
         with:

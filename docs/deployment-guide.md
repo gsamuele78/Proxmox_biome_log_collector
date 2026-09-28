@@ -95,8 +95,8 @@ curl -k --max-time 3 https://<monitoring-vm-ip>:8443/  # from a DIFFERENT host
 git clone https://github.com/gsamuele78/Proxmox_biome_log_collector.git /opt/proxmox-biome
 cd /opt/proxmox-biome
 cp .env.example .env
-"${EDITOR:-vi}" .env   # fill in BASE_DOMAIN, PVE_API_HOST, PVE_API_TOKEN_*, SMTP, etc.
-scripts/generate-secrets.sh
+"${EDITOR:-vi}" .env   # fill in BASE_DOMAIN, PVE_API_TOKEN_*, CV4PVE_*_HOSTS, LOKI_BIND_ADDR, SMTP, etc.
+sudo scripts/generate-secrets.sh
 ```
 
 `generate-secrets.sh` fills in every `CHANGEME`/blank secret-type value in
@@ -107,8 +107,15 @@ idempotent — re-running it never overwrites a value you've already set.
 ## 5. Bootstrap the stack
 
 ```bash
-scripts/bootstrap-monitoring-vm.sh
+sudo scripts/bootstrap-monitoring-vm.sh
 ```
+
+Run it (and `generate-secrets.sh`) as root: the rendered
+`alertmanager.yml` and `.htpasswd` are bind-mounted into containers that
+run with every capability dropped, so the scripts chown them for the
+container user (`root:65534 0640` / `root:root 0600`). Run as a
+non-root docker-group user they fall back to world-readable `0644` and
+print a warning.
 
 This validates required `.env` vars, renders `config/alertmanager/alertmanager.yml`
 from its `.tmpl` (Alertmanager doesn't support native `${VAR}` substitution),
@@ -173,7 +180,7 @@ dashboard exists for `cv4pve-metrics-exporter`; see `docs/roadmap.md`.
   alert: `docker compose exec prometheus wget -qO- --post-data='[]' ...`
   or use Alertmanager's own "Silence"/test tooling.
 - `docker compose run --rm cv4pve-diag` — generates a first report; check
-  `https://audit.${BASE_DOMAIN}/reports/latest.html`.
+  `https://audit.${BASE_DOMAIN}/latest.html`.
 - PDM (`https://pdm.${BASE_DOMAIN}/`) — reachable via Traefik; confirm (per
   step 3) it is **not** reachable on any other path.
 
