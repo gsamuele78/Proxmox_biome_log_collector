@@ -6,6 +6,14 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- CI `promtool` and `amtool` jobs never passed: `docker run prom/prometheus
+  promtool ...` hands `promtool` to the image's ENTRYPOINT (the server
+  binary). Both jobs, and the commands in `tests/README.md`, now use
+  `--entrypoint`. The README's `rules/*.yml` glob was also expanded by the
+  host shell against a container path; it now lists the files.
+
 ## [0.2.0] - 2026-09-28
 
 ### Added
