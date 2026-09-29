@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
 ### Added
 
 - `tests/lab/`: a Vagrant + libvirt lab and `tests/e2e/` phases run by
@@ -16,10 +18,30 @@ follows [Semantic Versioning](https://semver.org/).
   `ProxmoxNodeDown`, cv4pve-diag host fallback, and OIDC logins through
   oauth2-proxy, PVE and PDM. See `tests/lab/README.md`.
 - `ALERTMANAGER_SMTP_REQUIRE_TLS` (default `true`) for plaintext relays.
-- oauth2-proxy: PKCE (`S256`) and `OAUTH2_PROXY_TRUSTED_PROXY_IPS` limited to
-  the `monitoring-edge` subnet (it trusted `X-Forwarded-*` from any IP);
-  the `oauth2-proxy-auth` forwardAuth middleware caps the auth response
-  body (`maxResponseBodySize`).
+
+### Changed
+
+- Dropped the `docker-socket-proxy` scrape job: it has no `/metrics` and was
+  permanently down. Added self-monitoring jobs for the monitoring VM's own
+  node-exporter (previously deployed but never scraped), Alertmanager,
+  Loki, Grafana and Traefik (metrics enabled on the internal entrypoint).
+- New `config/prometheus/rules/monitoring.rules.yml`:
+  `Cv4pveMetricsExporterDown` (docs/hardening.md already claimed this
+  alert existed), `MonitoringStackTargetDown`, `CephMgrExporterAbsent`,
+  `LokiRequestErrors`.
+- The smoke test now also checks Loki's host port, the cv4pve-diag binary,
+  and that every in-stack scrape job is `up`.
+
+### Removed
+
+- `.env` variables `PVE_API_HOST` and `CV4PVE_DIAG_SCHEDULE_CRON` (never read
+  by anything). Bootstrap now requires the variables the stack actually reads
+  (`CV4PVE_*_HOSTS`, SMTP smarthost and receiver).
+- **Upgrade note:** before re-running `bootstrap-monitoring-vm.sh` on a 0.1.0
+  deployment, add `LOKI_BIND_ADDR` and `ALERTMANAGER_SMTP_REQUIRE_TLS` to
+  `.env` (see `.env.example`), and make sure `CV4PVE_DIAG_HOSTS`,
+  `CV4PVE_EXPORTER_HOSTS`, `ALERTMANAGER_SMTP_SMARTHOST` and
+  `ALERTMANAGER_RECEIVER_EMAIL` are set: bootstrap now requires them.
 
 ### Fixed
 
@@ -101,21 +123,12 @@ Found by review before the lab existed:
 - Audit report URLs in the docs pointed at `/reports/…`; nginx serves the
   reports at the site root.
 
-### Changed
+### Security
 
-- Dropped the `docker-socket-proxy` scrape job: it has no `/metrics` and was
-  permanently down. Added self-monitoring jobs for the monitoring VM's own
-  node-exporter (previously deployed but never scraped), Alertmanager,
-  Loki, Grafana and Traefik (metrics enabled on the internal entrypoint).
-- New `config/prometheus/rules/monitoring.rules.yml`:
-  `Cv4pveMetricsExporterDown` (docs/hardening.md already claimed this
-  alert existed), `MonitoringStackTargetDown`, `CephMgrExporterAbsent`,
-  `LokiRequestErrors`.
-- Removed the unused `PVE_API_HOST` and `CV4PVE_DIAG_SCHEDULE_CRON`
-  variables. Bootstrap now requires the variables the stack actually reads
-  (`CV4PVE_*_HOSTS`, SMTP smarthost and receiver).
-- The smoke test now also checks Loki's host port, the cv4pve-diag binary,
-  and that every in-stack scrape job is `up`.
+- oauth2-proxy: PKCE (`S256`) and `OAUTH2_PROXY_TRUSTED_PROXY_IPS` limited to
+  the `monitoring-edge` subnet (it trusted `X-Forwarded-*` from any IP);
+  the `oauth2-proxy-auth` forwardAuth middleware caps the auth response
+  body (`maxResponseBodySize`).
 
 ## [0.1.0] - 2026-07-31
 
@@ -191,5 +204,6 @@ documented, git-tracked repository.
   default with uncomment instructions, since `envsubst` has no
   conditionals.
 
-[Unreleased]: https://github.com/gsamuele78/Proxmox_biome_log_collector/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/gsamuele78/Proxmox_biome_log_collector/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/gsamuele78/Proxmox_biome_log_collector/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gsamuele78/Proxmox_biome_log_collector/releases/tag/v0.1.0

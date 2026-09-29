@@ -104,6 +104,7 @@ per-node agent setup, TLS certificate options) is
 - [docs/roadmap.md](docs/roadmap.md) — deliberately deferred work, and why.
 - [docs/adr/](docs/adr/) — every architectural decision, with alternatives considered.
 - [docs/plan/EXECUTION-PLAN.md](docs/plan/EXECUTION-PLAN.md) — the build plan this repo was built from, checked off.
+- [docs/plan/NEXT-SESSION-PLAN.md](docs/plan/NEXT-SESSION-PLAN.md) — what comes after 0.2.0 (upgrade, image bumps, PegaProx, Dependabot).
 - [docs/research/original-chat-transcript.md](docs/research/original-chat-transcript.md) — the original research that motivated this repo (provenance only, unedited).
 
 ## Testing & CI
