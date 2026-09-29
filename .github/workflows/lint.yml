@@ -42,7 +42,22 @@ jobs:
       - name: shellcheck
         run: |
           shopt -s globstar
-          shellcheck -x scripts/**/*.sh tests/integration/*.sh tests/e2e/*.sh tests/lab/*.sh tests/lab/provision/*.sh
+          shellcheck -x scripts/**/*.sh tests/integration/*.sh tests/e2e/*.sh \
+            tests/lab/*.sh tests/lab/provision/*.sh tests/lint/*.sh
+
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: tests/lint/check-changelog.sh
+
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 tests/lint/check-drift.py
 
   markdownlint:
     runs-on: ubuntu-latest

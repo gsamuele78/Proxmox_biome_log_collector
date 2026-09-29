@@ -10,10 +10,14 @@ click-ops configuration (e.g. GUI-managed reverse proxy state) that CI can't see
 1. Run the same checks CI runs, locally:
 
    ```bash
-   make lint       # yamllint, shellcheck, markdownlint, hadolint
+   make lint       # yamllint, shellcheck, markdownlint, hadolint, changelog, drift
    make validate   # docker compose config, promtool, amtool
    make test       # tests/integration/smoke-test.sh
    ```
+
+   Then run the lab tier that [docs/testing.md](docs/testing.md) asks for
+   your kind of change. CI has no Proxmox or Ceph: a green CI on an image
+   bump or a node-setup change proves little on its own.
 
 2. If you touch `docker-compose.yml` or anything under `config/`, re-read
    `docs/hardening.md` — new services must follow the same baseline (pinned image,
@@ -21,7 +25,9 @@ click-ops configuration (e.g. GUI-managed reverse proxy state) that CI can't see
 3. If the change is an architectural decision (new component, replaced component,
    changed trust boundary), add an ADR under `docs/adr/` using `docs/adr/0000-template.md`.
    Don't silently change the architecture in a way future readers can't reconstruct.
-4. Update `CHANGELOG.md` under `[Unreleased]`.
+4. Update `CHANGELOG.md` under `[Unreleased]`, and every place that repeats
+   what you changed (see "Where each fact lives" in
+   [docs/maintenance-guide.md](docs/maintenance-guide.md)).
 5. Never commit real secrets, IPs, or hostnames belonging to a real environment —
    `.env.example` and `config/prometheus/targets/*.json.example` are the pattern to
    follow; real values stay in the gitignored `.env` / `*.json` on the deployed host.

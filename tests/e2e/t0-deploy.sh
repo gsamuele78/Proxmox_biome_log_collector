@@ -68,4 +68,31 @@ rules_loaded() {
 }
 check "monitoring.rules.yml loaded (group monitoring-stack)" rules_loaded
 
+# Loki push -> query round trip on the management address: the same API the
+# nodes' Alloy agents use, so a broken ingest path fails here, not in tier 1.
+probe="t0-probe-${RANDOM}${RANDOM}"
+check "Loki accepts a push on LOKI_BIND_ADDR" curl -sf --max-time 10 -X POST \
+  -H 'Content-Type: application/json' http://10.77.10.10:3100/loki/api/v1/push \
+  --data "{\"streams\":[{\"stream\":{\"job\":\"t0-probe\"},\"values\":[[\"$(date +%s%N)\",\"${probe}\"]]}]}"
+wait_for "pushed log line is queryable from Loki" 60 loki_has "{job=\"t0-probe\"} |= \"${probe}\""
+
+# Grafana's provisioned datasources must actually reach Prometheus and Loki.
+# The lab rewrites .env (new password) on every run while grafana-data keeps
+# the admin user from the first run, so align the DB with .env first.
+gf_user="$(sed -n 's/^GRAFANA_ADMIN_USER=//p' .env)"
+gf_pass="$(sed -n 's/^GRAFANA_ADMIN_PASSWORD=//p' .env)"
+docker compose exec -T grafana grafana cli admin reset-admin-password "${gf_pass}" >/dev/null 2>&1 || true
+gf_api() {
+  curl -sfk --max-time 15 --resolve "grafana.${DOMAIN}:443:127.0.0.1" \
+    -u "${gf_user}:${gf_pass}" "https://grafana.${DOMAIN}$1"
+}
+datasource_ok() {
+  local uid
+  uid="$(gf_api "/api/datasources/name/$1" | jq -er .uid)" || return 1
+  gf_api "/api/datasources/uid/${uid}/health" | jq -e '.status == "OK"'
+}
+check "Grafana admin login with the .env credentials" gf_api /api/user
+wait_for "Grafana datasource Prometheus is healthy" 60 datasource_ok Prometheus
+wait_for "Grafana datasource Loki is healthy" 60 datasource_ok Loki
+
 summary

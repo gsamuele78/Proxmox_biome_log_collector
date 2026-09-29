@@ -6,13 +6,53 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- CI job `deploy-e2e`: runs `tests/e2e/t0-deploy.sh` (the documented root
+  bootstrap plus the lab's tier-0 assertions) on the runner, with the lab's
+  management address on a dummy interface and a Mailpit sink. CI now proves
+  auth, the HTTPS redirect, secret file modes, Loki binding, alert delivery
+  by mail, and not only that containers start.
+- `t0-deploy.sh` also checks a Loki push/query round trip, the Grafana admin
+  login and that both provisioned datasources are healthy.
+- `tests/lint/check-drift.py` (CI `drift` job, `make lint`): fails when an
+  alert has no runbook entry, `.env.example` and the stack disagree on
+  variables, repeated image tags differ, a script or test phase is
+  undocumented, or a Markdown link is broken.
+- `tests/lint/check-changelog.sh` (CI `changelog` job, `make lint`) and
+  `.github/workflows/release.yml`: a `vX.Y.Z` tag publishes a GitHub Release
+  with that version's changelog section.
+- Docs: [docs/testing.md](docs/testing.md) (test catalogue and what to run
+  for which change), [docs/maintenance-guide.md](docs/maintenance-guide.md)
+  (change, bump, release and upgrade procedures), `AGENTS.md`,
+  [docs/repo-audit.md](docs/repo-audit.md), an alert catalogue in the
+  runbook, README status and version badges.
+
+### Changed
+
+- `make validate` now runs `promtool` and `amtool` like CI (it only ran
+  `docker compose config`); `make lint` also runs the two new checks.
+
+### Removed
+
+- `TZ` from `.env.example`: nothing read it. An existing `.env` can keep
+  it; it has no effect.
+
 ### Fixed
 
+- Deployment guide: new step 5a installs and enables the cv4pve-diag
+  systemd timer. The guide never said to, so a deployment that followed it
+  produced no compliance report. **Upgrade:** if
+  `systemctl list-timers cv4pve-diag.timer` shows nothing on your
+  monitoring VM, do step 5a. Step 9's Alertmanager test now uses a working
+  `amtool alert add` command.
 - CI `promtool` and `amtool` jobs never passed: `docker run prom/prometheus
   promtool ...` hands `promtool` to the image's ENTRYPOINT (the server
   binary). Both jobs, and the commands in `tests/README.md`, now use
   `--entrypoint`. The README's `rules/*.yml` glob was also expanded by the
   host shell against a container path; it now lists the files.
+- Lab: `vagrant up` failed on a held apt lock (apt-daily at first boot, or
+  an interrupted run); provisioning now waits for the lock.
 
 ## [0.2.0] - 2026-09-28
 

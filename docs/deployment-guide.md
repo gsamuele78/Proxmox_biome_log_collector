@@ -130,6 +130,25 @@ ADR-0005):
 docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml up -d
 ```
 
+### 5a. Schedule the daily compliance scan
+
+cv4pve-diag is a one-shot container run by a host systemd timer
+(`scripts/systemd/cv4pve-diag.timer`, daily at 02:15 local time plus up to
+5 minutes of jitter), which starts `scripts/systemd/cv4pve-diag.service`,
+which runs `scripts/run-cv4pve-diag.sh` (it tries each `CV4PVE_DIAG_HOSTS`
+entry in order). The unit expects the checkout at `/opt/proxmox-biome`;
+edit `WorkingDirectory=` and `ExecStart=` if yours is elsewhere.
+
+```bash
+sudo cp scripts/systemd/cv4pve-diag.service scripts/systemd/cv4pve-diag.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start cv4pve-diag.service      # first report now; needs step 6's token to work
+sudo systemctl enable --now cv4pve-diag.timer
+systemctl list-timers cv4pve-diag.timer
+```
+
+Without this step no compliance report is ever produced.
+
 ## 6. Set up each Proxmox VE node
 
 Run once per node (via your existing config-management tooling, or
@@ -178,11 +197,13 @@ dashboard exists for `cv4pve-metrics-exporter`; see `docs/roadmap.md`.
 
 - Grafana (`https://grafana.${BASE_DOMAIN}/`) — dashboards populated with
   real node/Ceph data.
-- Alertmanager (`https://alertmanager.${BASE_DOMAIN}/`) — send a test
-  alert: `docker compose exec prometheus wget -qO- --post-data='[]' ...`
-  or use Alertmanager's own "Silence"/test tooling.
-- `docker compose run --rm cv4pve-diag` — generates a first report; check
-  `https://audit.${BASE_DOMAIN}/latest.html`.
+- Alertmanager (`https://alertmanager.${BASE_DOMAIN}/`): inject a test
+  alert and confirm the mail reaches `ALERTMANAGER_RECEIVER_EMAIL` (after
+  `group_wait`, 30s):
+  `docker compose exec alertmanager amtool alert add DeployTest severity=warning --alertmanager.url=http://localhost:9093`
+- `sudo systemctl start cv4pve-diag.service` generates a report (step 5a);
+  check `https://audit.${BASE_DOMAIN}/latest.html`.
+- `https://prometheus.${BASE_DOMAIN}/targets`: every job up.
 - PDM (`https://pdm.${BASE_DOMAIN}/`) — reachable via Traefik; confirm (per
   step 3) it is **not** reachable on any other path.
 

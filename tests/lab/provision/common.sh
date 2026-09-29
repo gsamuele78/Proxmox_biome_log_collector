@@ -3,6 +3,11 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+# A fresh box runs apt-daily at first boot, and an interrupted `vagrant up`
+# can leave an apt-get behind: wait for the dpkg/lists locks instead of
+# failing on them. Applies to every later apt call on this VM.
+echo 'DPkg::Lock::Timeout "600";' > /etc/apt/apt.conf.d/99biome-lab-lock-timeout
+
 apt-get update -qq
 apt-get install -y -qq curl ca-certificates gnupg jq rsync python3 chrony >/dev/null
 

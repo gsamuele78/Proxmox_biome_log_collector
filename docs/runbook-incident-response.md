@@ -21,8 +21,7 @@ not the process itself.
    look at first.
 3. **Classify severity** — use the alert's own `severity` label
    (`critical`/`warning`, set per-rule in
-   `config/prometheus/rules/proxmox.rules.yml` /
-   `ceph.rules.yml`) as the starting point, adjusted by the responder's
+   `config/prometheus/rules/*.yml`) as the starting point, adjusted by the responder's
    own assessment of actual impact (a single-node `node_exporter` scrape
    failure is not the same severity as a Ceph `HEALTH_ERR` with degraded
    PGs, even if both fire as "critical" at the rule level).
@@ -53,10 +52,33 @@ state, which is out of scope for a monitoring stack. What's captured here
 is the technical evidence trail (metrics, logs, compliance reports) that
 notification is written from.
 
+## Alert catalogue
+
+Every rule in `config/prometheus/rules/`, with the first thing to look at.
+When you add or rename a rule, add or update its row here (the rule file is
+the source of truth for expressions and thresholds).
+
+| Alert | Severity | Fires when | First check |
+| --- | --- | --- | --- |
+| `ProxmoxNodeDown` | critical | a node's `node_exporter` is unscraped for 5m | Is the node up (PDM, `pvecm status`)? If it is, `systemctl status prometheus-node-exporter` on it and the path to `:9100` from the monitoring VM. |
+| `ProxmoxNodeHighIOWait` | warning | iowait > 20% for 10m | Ceph recovery/backfill (`ceph -s`), a backup job, a failing disk (`dmesg`, SMART). |
+| `ProxmoxRootFilesystemFillingUp` | warning | a filesystem < 10% free for 15m | `/var/log`, `/var/lib/vz`, old kernels. |
+| `CephHealthError` | critical | `HEALTH_ERR` for 5m | `ceph health detail`; data availability is at risk, escalate first. |
+| `CephHealthWarn` | warning | `HEALTH_WARN` for 15m | `ceph health detail`; often a clock skew, a nearfull OSD, or recovery. |
+| `CephOSDDown` | critical | an OSD is down for 5m | `ceph osd tree`, then `systemctl status ceph-osd@<id>` on its host. |
+| `CephPGsDegraded` | warning | degraded PGs for 10m | Usually follows an OSD or node outage; watch recovery progress. |
+| `CephMgrExporterAbsent` | warning | no mgr serves `ceph_*` metrics for 10m | `ceph mgr module ls` (prometheus enabled?), `scripts/node-setup/enable-ceph-prometheus.sh`, `config/prometheus/targets/ceph-mgr.json`. |
+| `Cv4pveMetricsExporterDown` | warning | exporter unscraped for 5m | `docker compose logs cv4pve-metrics-exporter`: token, `CV4PVE_EXPORTER_HOSTS`. |
+| `MonitoringStackTargetDown` | warning | a stack component (`job` label) is unscraped for 5m | `docker compose ps` and that service's logs. |
+| `LokiRequestErrors` | warning | > 5% of Loki requests fail for 15m | `docker compose logs loki`; disk space of the `loki-data` volume. |
+
+An alert that isn't in this table is a documentation bug.
+
 ## Where things live
 
 - **Alert rules**: `config/prometheus/rules/proxmox.rules.yml`,
-  `config/prometheus/rules/ceph.rules.yml`.
+  `config/prometheus/rules/ceph.rules.yml`,
+  `config/prometheus/rules/monitoring.rules.yml` (the stack watching itself).
 - **Alert routing**: `config/alertmanager/alertmanager.yml.tmpl`.
 - **Audit trail**: Loki, fed by Alloy from `auditd` on each node
   (`scripts/node-setup/configure-auditd.sh`).

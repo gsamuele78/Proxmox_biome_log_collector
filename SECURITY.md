@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
-Instead, use GitHub's private [Security Advisories](../../security/advisories/new)
+Instead, use GitHub's private [Security Advisories](https://github.com/gsamuele78/Proxmox_biome_log_collector/security/advisories/new)
 feature for this repository, or contact the maintainer directly. Include:
 
 - Affected component/file and version (compose service, script, or config).

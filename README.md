@@ -1,5 +1,23 @@
 # Proxmox Biome — Observability, Audit & NIS2 Compliance Stack
 
+[![Lint](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/lint.yml)
+[![Validate and test](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/validate-and-test.yml/badge.svg?branch=main)](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/validate-and-test.yml)
+[![Security scan](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/security-scan.yml/badge.svg?branch=main)](https://github.com/gsamuele78/Proxmox_biome_log_collector/actions/workflows/security-scan.yml)
+[![Version](https://img.shields.io/github/v/tag/gsamuele78/Proxmox_biome_log_collector?sort=semver&label=version)](CHANGELOG.md)
+[![Last commit](https://img.shields.io/github/last-commit/gsamuele78/Proxmox_biome_log_collector/main)](https://github.com/gsamuele78/Proxmox_biome_log_collector/commits/main)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+[![Traefik](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services.traefik.image&label=traefik)](docker-compose.yml)
+[![Prometheus](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services.prometheus.image&label=prometheus)](docker-compose.yml)
+[![Alertmanager](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services.alertmanager.image&label=alertmanager)](docker-compose.yml)
+[![Loki](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services.loki.image&label=loki)](docker-compose.yml)
+[![Grafana](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services.grafana.image&label=grafana)](docker-compose.yml)
+[![cv4pve-diag](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgsamuele78%2FProxmox_biome_log_collector%2Fmain%2Fdocker-compose.yml&query=%24.services%5B%27cv4pve-diag%27%5D.image&label=cv4pve-diag)](docker/cv4pve-diag/Dockerfile)
+
+The badges update themselves: CI status from the workflows, the release
+from the latest `vX.Y.Z` tag (whose notes come from [CHANGELOG.md](CHANGELOG.md)),
+component versions from the tags pinned in `docker-compose.yml` on `main`.
+
 A single external monitoring/audit VM for a growing Proxmox VE + Ceph
 cluster: metrics, logs, alerting, and NIS2-tagged compliance reporting,
 behind a hardened Traefik reverse proxy, with local-auth bootstrap and a
@@ -100,7 +118,10 @@ per-node agent setup, TLS certificate options) is
 - [docs/hardening.md](docs/hardening.md) — container hardening baseline + NIS2 Art. 21 control mapping.
 - [docs/keycloak-integration.md](docs/keycloak-integration.md) — Phase 2 SSO wiring.
 - [docs/troubleshooting.md](docs/troubleshooting.md) — symptom → cause → fix.
-- [docs/runbook-incident-response.md](docs/runbook-incident-response.md) — alert → triage → NIS2 notification timeline.
+- [docs/runbook-incident-response.md](docs/runbook-incident-response.md) — alert catalogue, alert → triage → NIS2 notification timeline.
+- [docs/testing.md](docs/testing.md) — every test layer, lab phase and CI job, and what to run for which change.
+- [docs/maintenance-guide.md](docs/maintenance-guide.md) — changing, bumping, releasing and upgrading (humans); [AGENTS.md](AGENTS.md) is the agent version.
+- [docs/repo-audit.md](docs/repo-audit.md) — what the repo contains vs what was documented, and what was fixed.
 - [docs/roadmap.md](docs/roadmap.md) — deliberately deferred work, and why.
 - [docs/adr/](docs/adr/) — every architectural decision, with alternatives considered.
 - [docs/plan/EXECUTION-PLAN.md](docs/plan/EXECUTION-PLAN.md) — the build plan this repo was built from, checked off.
@@ -109,15 +130,17 @@ per-node agent setup, TLS certificate options) is
 
 ## Testing & CI
 
-```bash
-# Everything CI runs, documented for local use:
-cat tests/README.md
-```
+| Layer | Runs in | Proves |
+| --- | --- | --- |
+| Lint, changelog and drift checks | CI, `make lint` | style, no secrets, docs agree with code |
+| Config validation | CI, `make validate` | compose, `promtool`, `amtool` accept the configs |
+| Smoke test | CI, `make test` | the stack boots and every container is healthy |
+| Deployment e2e | CI (`deploy-e2e`) | the documented root bootstrap, auth, TLS redirect, Loki round trip, Grafana datasources, an alert delivered by mail |
+| VM lab tiers 1-3 | local libvirt, `make lab-up && make lab-test` | real PVE node, 3-node Ceph cluster, failover alerts, Keycloak OIDC |
 
-Lint (yamllint, hadolint, shellcheck, markdownlint), config validation
-(`docker compose config`, `promtool`, `amtool`), security scanning
-(gitleaks, Trivy), and an integration smoke test all run in
-[.github/workflows/](.github/workflows/) on every push and PR.
+CI has no Proxmox or Ceph, so anything touching them is proven only by the
+lab. See [docs/testing.md](docs/testing.md) for the full catalogue and
+[tests/README.md](tests/README.md) for the commands.
 
 ## Contributing
 
