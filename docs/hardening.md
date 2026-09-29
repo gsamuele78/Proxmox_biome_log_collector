@@ -47,7 +47,7 @@ can't use the socket to escape to the host or control other containers.
 ## No `HEALTHCHECK` on distroless services
 
 `cv4pve-metrics-exporter` and `cv4pve-diag` (ADR-0007) run from
-`gcr.io/distroless/cc-debian12:nonroot` final-stage images — deliberately
+`gcr.io/distroless/cc-debian13:nonroot` final-stage images — deliberately
 no shell, no package manager, nothing beyond the single binary and its
 glibc/libstdc++ runtime dependencies. This means there is no `wget`/`curl`
 available to run as a container-level `HEALTHCHECK` probe.

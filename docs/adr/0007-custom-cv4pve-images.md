@@ -16,11 +16,13 @@ as containers alongside everything else in `docker-compose.yml`.
 Build minimal custom images (`docker/cv4pve-diag/Dockerfile`,
 `docker/cv4pve-metrics-exporter/Dockerfile`) using a two-stage build:
 
-1. A `debian:trixie-slim` builder stage downloads the pinned release `.deb`
+1. A `debian:trixie-<date>-slim` builder stage (dated tag, so builds are
+   reproducible) downloads the pinned release `.deb`
    (`ARG CV4PVE_VERSION`), verifies it against a SHA-256 checksum computed
    directly from that release asset (`ARG CV4PVE_DEB_SHA256`) rather than
    trusting the download blindly, and extracts the single binary.
-2. A `gcr.io/distroless/cc-debian12:nonroot` final stage copies in just that
+2. A `gcr.io/distroless/cc-debian13:nonroot` final stage (Debian 12 until
+   0.3.0; the binaries need glibc 2.27 at most, so either works) copies in just that
    binary (`ldd`-verified to depend only on glibc/libstdc++/libgcc_s/
    libpthread/libm/libdl/librt — exactly what that distroless base
    provides) — no shell, no package manager, no unrelated tooling shipped.
