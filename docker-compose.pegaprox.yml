@@ -1,14 +1,13 @@
-## Optional PegaProx overlay — EXPERIMENTAL/BETA (upstream is v0.9.x, AGPL-3.0,
-## not a 1.0 release). Disabled by default: this file is never read unless you
-## explicitly add it, e.g.:
+## Optional PegaProx overlay (opt-in, AGPL-3.0). This file is never read
+## unless you add it explicitly:
 ##   docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml up -d
-## See docs/adr/0005-cv4pve-diag-default-pegaprox-experimental.md before
-## enabling this in anything resembling production. cv4pve-diag remains the
-## default, supported compliance auditor.
+## PegaProx is a second management UI with write access to the cluster; read
+## docs/adr/0008-pegaprox-1x-opt-in-overlay.md before enabling it.
+## cv4pve-diag stays the default compliance auditor.
 
 services:
   pegaprox:
-    image: ghcr.io/pegaprox/pegaprox:0.9.15
+    image: ghcr.io/pegaprox/pegaprox:1.2.0
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -20,17 +19,31 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      PEGAPROX_ADMIN_EMAIL: "${PEGAPROX_ADMIN_EMAIL}"
+      # Plain HTTP on :5000 for Traefik; without this PegaProx serves its own
+      # self-signed HTTPS there and Traefik's HTTP backend gets garbage.
+      PEGAPROX_BEHIND_PROXY: "true"
+      # Traefik's address on the edge network (subnet pinned in docker-compose.yml).
+      PEGAPROX_TRUSTED_PROXIES: "172.28.0.0/24"
+      PEGAPROX_ALLOWED_ORIGINS: "https://pegaprox.${BASE_DOMAIN}"
+    # The image's own VOLUMEs. Anything else (e.g. /data) leaves the real
+    # config and database in anonymous volumes, lost on the next recreate.
     volumes:
-      - pegaprox-data:/data
+      - pegaprox-config:/app/config
+      - pegaprox-logs:/app/logs
     networks:
       - edge
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:5000/ || exit 1"]
+      # No wget/curl in the image (python:3.12-slim base): use Python.
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health', timeout=4)"
       interval: 30s
       timeout: 5s
-      retries: 3
+      start_period: 120s
+      retries: 5
     deploy:
       resources:
         limits:
@@ -50,4 +63,5 @@ services:
       # docs/roadmap.md if you want to extend this overlay.
 
 volumes:
-  pegaprox-data:
+  pegaprox-config:
+  pegaprox-logs:

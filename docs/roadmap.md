@@ -20,16 +20,16 @@ then reintroduce the alert rule against its actual metric.
 
 ## PegaProx VNC/SSH-websocket console routing
 
-ADR-0005 keeps PegaProx opt-in and explicitly does **not** route its VNC
+ADR-0008 keeps PegaProx opt-in and explicitly does **not** route its VNC
 console (`:5001`) or SSH-over-websocket (`:5002`) ports through Traefik —
 only its main web UI (`:5000`). Console access via those ports needs
 sticky-session / websocket-upgrade handling that wasn't validated as part
 of the initial build.
 
-**Plan**: once PegaProx graduates past EXPERIMENTAL/BETA status (per
-ADR-0005's stated re-evaluation trigger), add Traefik routers for `:5001`/
-`:5002` with `websocket` middleware support tested end-to-end against a
-real console session, not just the main UI.
+**Plan**: PegaProx is on stable 1.x since ADR-0008. Next, add Traefik
+routers for `:5001`/`:5002` with websocket support, tested end-to-end in
+the lab against a real console session (extend `tests/e2e/t1-pegaprox.sh`),
+and automate adding the lab cluster through PegaProx's API.
 
 ## Native `cv4pve_*` Grafana dashboard
 

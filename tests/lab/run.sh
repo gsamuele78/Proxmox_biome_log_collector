@@ -52,6 +52,7 @@ if ((TIER >= 1)); then
   phase "t1 node agents on pve1" pve1 "bash ${e2e}/t1-node.sh"
   phase "t1 monitoring <- real PVE" monitoring "bash ${e2e}/t1-monitoring.sh"
   phase "t1 reachability from mgmt LAN" pve1 "bash ${e2e}/t1-pve-reachability.sh"
+  phase "t1 PegaProx overlay" monitoring "bash ${e2e}/t1-pegaprox.sh"
 
   echo; echo "######## t1 perimeter view (host)"
   ok=0

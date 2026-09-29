@@ -88,7 +88,7 @@ authoritative port-by-port breakdown.
 | **cv4pve-metrics-exporter** | PVE-object-level metrics (VM/LXC/storage state) that node_exporter/Ceph's own exporter don't cover. |
 | **cv4pve-diag** | Default NIS2/ISO27001/GDPR/DORA-tagged compliance auditor, scheduled daily. |
 | **Proxmox Datacenter Manager (PDM)** | Native install, reverse-proxied — see [ADR-0003](docs/adr/0003-pdm-colocated-native-loopback-proxy.md). |
-| **PegaProx** | Optional, opt-in, EXPERIMENTAL — see [ADR-0005](docs/adr/0005-cv4pve-diag-default-pegaprox-experimental.md). |
+| **PegaProx** | Optional opt-in overlay (1.x) — see [ADR-0008](docs/adr/0008-pegaprox-1x-opt-in-overlay.md). |
 | **oauth2-proxy** | Keycloak OIDC ForwardAuth for services with no native SSO support (Phase 2 — [ADR-0006](docs/adr/0006-local-auth-bootstrap-then-keycloak-oidc.md)). |
 
 Every design decision above — and the alternatives considered and

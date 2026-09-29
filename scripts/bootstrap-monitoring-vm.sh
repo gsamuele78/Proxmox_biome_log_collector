@@ -82,5 +82,5 @@ log "Starting core stack..."
 docker compose up -d
 
 log "Done. Check status with: docker compose ps"
-log "PegaProx (optional, experimental) is not started — see docs/adr/0005 and README for the opt-in overlay command."
+log "PegaProx (optional overlay) is not started — see docs/adr/0008 for the opt-in command."
 log "Keycloak forwardAuth (Phase 2) is not started — see docs/keycloak-integration.md."

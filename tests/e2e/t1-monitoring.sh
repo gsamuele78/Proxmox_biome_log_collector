@@ -20,6 +20,10 @@ names="$(prom_query 'count by (__name__) ({__name__=~"cv4pve_.+"})' | jq -r '.[]
 if [[ -n "${names}" ]]; then
   printf '%s\n' "${names}" > "${ARTIFACTS}/cv4pve-metric-names.txt"
   pass "cv4pve_* metrics present ($(wc -l <<<"${names}") names -> artifacts/cv4pve-metric-names.txt)"
+  # One sample series per metric, with its labels: the input for
+  # config/grafana/provisioning/dashboards/cv4pve/ and the guest alerts.
+  prom_query 'topk by (__name__) (1, {__name__=~"cv4pve_.+"})' \
+    | jq -r '.[].metric | tojson' | sort > "${ARTIFACTS}/cv4pve-metric-labels.jsonl"
 else
   fail "no cv4pve_* metrics in Prometheus"
   docker compose logs --tail 30 cv4pve-metrics-exporter

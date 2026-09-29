@@ -1,6 +1,6 @@
 # ADR-0005: cv4pve-diag as the default compliance auditor; PegaProx opt-in and marked experimental
 
-Status: Accepted
+Status: Accepted; the PegaProx part is superseded by [ADR-0008](0008-pegaprox-1x-opt-in-overlay.md)
 Date: 2026-07-31
 
 ## Context

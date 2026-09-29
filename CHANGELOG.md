@@ -27,9 +27,32 @@ follows [Semantic Versioning](https://semver.org/).
   (change, bump, release and upgrade procedures), `AGENTS.md`,
   [docs/repo-audit.md](docs/repo-audit.md), an alert catalogue in the
   runbook, README status and version badges.
+- `.github/dependabot.yml`: weekly grouped PRs for the compose images, the
+  Dockerfiles' base images and GitHub Actions. `upstream-versions.yml`:
+  weekly check of the cv4pve `.deb` versions, opening an issue (never a PR,
+  ADR-0007) when upstream has a new release.
+- Lab phase `tests/e2e/t1-pegaprox.sh` and
+  [ADR-0008](docs/adr/0008-pegaprox-1x-opt-in-overlay.md).
 
 ### Changed
 
+- Images (checked against the registries on 2026-09-29): `traefik`
+  v3.7.9 → v3.7.13, `prom/prometheus` v3.13.2 → v3.15.0,
+  `prom/alertmanager` v0.33.1 → v0.34.1, `grafana/loki` 3.7.4 → 3.7.8,
+  `nginxinc/nginx-unprivileged` 1.31.3 → 1.31.6-alpine3.24,
+  `oauth2-proxy` v7.15.3 → v7.15.4-alpine, PegaProx 0.9.15 → 1.2.0.
+  Grafana 13.0.2, node-exporter v1.12.1, docker-socket-proxy v0.5.0 and
+  cv4pve-metrics-exporter 2.0.0 were already current.
+- cv4pve-diag 2.4.0 → 2.7.0. The `.deb` checksum was computed from the
+  release asset and matches the digest GitHub publishes for it. 2.7.0
+  renumbers findings: critical levels get their own `C` codes (`WN0027` →
+  `CN0027`), some codes are retired. This stack passes no ignore rules, so
+  nothing breaks here; if you added an `--ignored-issues-file`, add the new
+  `C` codes to it.
+- The cv4pve images build from a dated `debian:trixie-20260918-slim` (was
+  the floating `trixie-slim`) and run on `gcr.io/distroless/cc-debian13`
+  (was Debian 12, now matching the builder; the binaries need glibc 2.27).
+- PegaProx is no longer labelled EXPERIMENTAL (ADR-0008).
 - `make validate` now runs `promtool` and `amtool` like CI (it only ran
   `docker compose config`); `make lint` also runs the two new checks.
 
@@ -37,9 +60,19 @@ follows [Semantic Versioning](https://semver.org/).
 
 - `TZ` from `.env.example`: nothing read it. An existing `.env` can keep
   it; it has no effect.
+- `PEGAPROX_ADMIN_EMAIL`: PegaProx never read it (its admin account is
+  created on first login).
 
 ### Fixed
 
+- The PegaProx overlay could not have worked: it mounted its volume at
+  `/data` while the image keeps its state in `/app/config` and `/app/logs`
+  (so config lived in anonymous volumes, lost on recreate), its `wget`
+  healthcheck can't run in the image, and PegaProx served HTTPS to
+  Traefik's plain-HTTP backend. **Upgrade** (only if you enabled it): the
+  old `pegaprox-data` volume holds nothing; remove it with
+  `docker volume rm <project>_pegaprox-data` after bringing the overlay up
+  again.
 - Deployment guide: new step 5a installs and enables the cv4pve-diag
   systemd timer. The guide never said to, so a deployment that followed it
   produced no compliance report. **Upgrade:** if
