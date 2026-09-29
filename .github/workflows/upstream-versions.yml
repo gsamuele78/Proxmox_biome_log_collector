@@ -1,0 +1,51 @@
+name: Upstream versions
+
+# Dependabot can't see the cv4pve .deb versions (an ARG plus a checksum in
+# docker/*/Dockerfile). This compares them with the latest GitHub release
+# and opens one issue per outdated tool. It never opens a PR: the new
+# checksum must be verified by a person against the release (ADR-0007).
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  cv4pve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compare pinned cv4pve versions with upstream releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=0
+          for tool in cv4pve-diag cv4pve-metrics-exporter; do
+            pinned="$(sed -n 's/^ARG CV4PVE_VERSION=//p' "docker/${tool}/Dockerfile")"
+            latest="$(gh api "repos/Corsinvest/${tool}/releases/latest" --jq .tag_name)"
+            latest="${latest#v}"
+            echo "${tool}: pinned ${pinned}, latest ${latest}"
+            [[ "${pinned}" == "${latest}" ]] && continue
+            title="${tool} ${latest} is available (pinned ${pinned})"
+            if gh issue list --state open --search "in:title \"${tool} ${latest} is available\"" \
+                --json number --jq 'length' | grep -qx 0; then
+              gh issue create --title "${title}" --body "$(cat <<EOF
+          Upstream: https://github.com/Corsinvest/${tool}/releases/tag/v${latest}
+
+          To bump (docs/maintenance-guide.md, "Bump cv4pve-diag or cv4pve-metrics-exporter"):
+
+          1. Download the \`.deb\` from the release page yourself and run \`sha256sum\`.
+          2. Update \`ARG CV4PVE_VERSION\` and \`ARG CV4PVE_DEB_SHA256\` in \`docker/${tool}/Dockerfile\`,
+             the image tag in \`docker-compose.yml\` and \`.github/workflows/security-scan.yml\`.
+          3. Read the upstream changelog for CLI and permission changes.
+          4. CI green, then lab tier 1 (real PVE API).
+          EOF
+              )"
+            fi
+            status=1
+          done
+          # Red run = something to bump; the issue says what.
+          exit "${status}"

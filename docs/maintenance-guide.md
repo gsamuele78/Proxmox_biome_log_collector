@@ -48,6 +48,11 @@ The drift check enforces the rows about tags, env vars and alerts.
 
 ### Bump a container image
 
+Dependabot opens these PRs weekly (grouped minor/patch). Treat its PR like
+your own: it changes only the compose tag, so the drift check fails until
+you update the repeated promtool/amtool tags, and CI can't prove the bump
+without the lab.
+
 1. Change the tag in the compose file. For `prom/prometheus` and
    `prom/alertmanager`, also in the places listed above (the drift check
    fails until you do).
@@ -57,6 +62,9 @@ The drift check enforces the rows about tags, env vars and alerts.
 4. `CHANGELOG.md` → `### Changed`: `` `traefik` v3.7.9 → v3.7.13 ``.
 
 ### Bump cv4pve-diag or cv4pve-metrics-exporter
+
+The weekly `upstream-versions.yml` run opens an issue when upstream has a
+new release.
 
 Follow "Updating custom-built images" in
 [deployment-guide.md](deployment-guide.md). Also update the image tag in

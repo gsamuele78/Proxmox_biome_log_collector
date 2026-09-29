@@ -1,0 +1,44 @@
+# Weekly update PRs for everything Dependabot can see. What it can't see
+# (cv4pve .deb versions, tags repeated in CI/docs/lab) is covered by
+# .github/workflows/upstream-versions.yml and tests/lint/check-drift.py.
+# A green Dependabot PR is not proof: run the lab tier that
+# docs/testing.md asks for before merging an image bump.
+version: 2
+updates:
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      # Built locally from docker/*/Dockerfile, not pulled from a registry.
+      - dependency-name: proxmox-biome/*
+    groups:
+      compose-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: docker
+    directories:
+      - /docker/cv4pve-diag
+      - /docker/cv4pve-metrics-exporter
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      base-images:
+        patterns: ["*"]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

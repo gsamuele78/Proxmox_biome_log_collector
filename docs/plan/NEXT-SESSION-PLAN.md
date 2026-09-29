@@ -17,24 +17,31 @@ and continue from step 1".
 - Not yet done: the commit, the `v0.2.0` tag, and a first CI run of these
   changes on GitHub.
 
-## 1. Commit and tag 0.2.0 (user)
+## 1. Commit and tag 0.2.0 — done 2026-09-29
 
-The code was committed as `c06dfd9` ("big tests"). What remains is the
-release commit (CHANGELOG `[0.2.0]`, this plan, the README link):
+`release: 0.2.0` (`cddc445`) and tag `v0.2.0` are on GitHub, and the
+[v0.2.0 Release](https://github.com/gsamuele78/Proxmox_biome_log_collector/releases/tag/v0.2.0)
+is published from its changelog section. Along the way (all under
+`[Unreleased]` in `CHANGELOG.md`):
 
-```bash
-git add CHANGELOG.md README.md docs/plan/NEXT-SESSION-PLAN.md
-git commit -m "release: 0.2.0"
-git tag -a v0.2.0 -m "0.2.0"
-git push && git push --tags
-```
+- the `promtool`/`amtool` CI jobs had never passed (image ENTRYPOINT);
+- CI gained `deploy-e2e` (the lab's `t0-deploy.sh` on the runner), a drift
+  check and a changelog check, and a `release.yml` workflow;
+- the deployment guide gained step 5a (the cv4pve-diag timer was never
+  installed by any documented step);
+- new docs: `docs/testing.md`, `docs/maintenance-guide.md`,
+  `docs/repo-audit.md`, `AGENTS.md`, the runbook's alert catalogue;
+- lab tiers 1 and 2 passed on VMs rebuilt that day (tier 3 not run).
 
-Then check that the `lint`, `validate-and-test` and `security-scan`
-workflows are green. They have never run on these changes.
+Steps 3-6 continue on branch `feat/0.3.0`, in the order 5, 3, 4, 6, so the
+image bumps can go through Dependabot's grouping from the start.
 
 ## 2. Upgrade the real deployment from 0.1.0 to 0.2.0
 
-Follow the upgrade note under 0.2.0 "Removed" in `CHANGELOG.md`. In order:
+Follow the upgrade note under 0.2.0 "Removed" in `CHANGELOG.md`. Also do
+deployment guide step 5a (cv4pve-diag timer) if
+`systemctl list-timers cv4pve-diag.timer` shows nothing: otherwise no
+compliance report has ever been produced. In order:
 
 1. On the monitoring VM: `git pull`, then add the new keys to `.env`
    (`LOKI_BIND_ADDR` = the management-LAN IP, `ALERTMANAGER_SMTP_REQUIRE_TLS=true`)

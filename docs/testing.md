@@ -30,7 +30,13 @@ agent or Ceph is tested only in the lab, so a green CI does not prove it.
 | `lint.yml` | yamllint, hadolint (both Dockerfiles), shellcheck, markdownlint, changelog, drift | push/PR to `main` |
 | `validate-and-test.yml` | compose-config, promtool, amtool, then smoke-test and deploy-e2e | push/PR to `main` |
 | `security-scan.yml` | gitleaks, trivy-config, trivy-images | push/PR to `main`, weekly schedule |
-| `release.yml` | publishes a GitHub Release from the matching `CHANGELOG.md` section | push of a `vX.Y.Z` tag |
+| `release.yml` | publishes a GitHub Release from the matching `CHANGELOG.md` section | push of a `vX.Y.Z` tag, or manual with a tag |
+| `upstream-versions.yml` | compares the cv4pve `.deb` versions with upstream releases and opens an issue per outdated tool (red run = something to bump) | weekly, manual |
+
+Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for the
+compose images, the two Dockerfiles' base images and the GitHub Actions.
+Its PRs go through the same workflows; see the table below for the lab tier
+an image bump still needs.
 
 ### Deployment e2e in CI
 
