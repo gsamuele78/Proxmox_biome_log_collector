@@ -52,7 +52,9 @@ follows [Semantic Versioning](https://semver.org/).
   `--entrypoint`. The README's `rules/*.yml` glob was also expanded by the
   host shell against a container path; it now lists the files.
 - Lab: `vagrant up` failed on a held apt lock (apt-daily at first boot, or
-  an interrupted run); provisioning now waits for the lock.
+  an interrupted run); provisioning now waits for the lock. `run.sh`
+  re-syncs a VM that `vagrant rsync` skipped, or stops with a clear error
+  instead of failing every phase.
 
 ## [0.2.0] - 2026-09-28
 

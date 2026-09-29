@@ -35,6 +35,21 @@ the audit again by hand before a 1.0.
 | 11 | Tests | No map of the tests: which phase proves what, which to run for a change | missing | [testing.md](testing.md) |
 | 12 | Process | No written procedure for bumping, releasing or upgrading; release notes were manual | missing | [maintenance-guide.md](maintenance-guide.md), `AGENTS.md`, `release.yml`, `check-changelog.sh` |
 | 13 | Lab | `vagrant up` failed when apt was locked (apt-daily at first boot, or a previous interrupted run) | wrong (lab) | `DPkg::Lock::Timeout` in `tests/lab/provision/common.sh` |
+| 14 | Lab | After an interrupted first `vagrant up`, `vagrant rsync` silently skipped the VM and every phase failed with `No such file` | wrong (lab) | `run.sh` syncs such a VM by name or stops with `FATAL`; recovery in [tests/lab/README.md](../tests/lab/README.md) |
+
+## Lab result
+
+2026-09-29, on VMs built that day:
+
+- `make lab-test TIER=1`: 8 phases, 0 failed, including the new Loki round
+  trip and Grafana datasource checks.
+- `make lab-test TIER=2`: 22 phases, 142 assertions, 0 failed: 3-node
+  cluster with Ceph, mgr failover, `CephOSDDown` and `ProxmoxNodeDown`
+  firing and mailed, cv4pve-diag host fallback, recovery.
+- Tier 3 (Keycloak) was not run in this pass.
+
+The deployed stack needed no fix at tiers 1-2. Findings 1-12 came from
+reading the repo and the CI history; 13 and 14 are in the lab tooling.
 
 ## Checked and consistent
 

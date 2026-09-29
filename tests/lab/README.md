@@ -72,3 +72,20 @@ services is in `/var/lib/biome-lab/basic-auth` on `monitoring`.
 | `t3-oauth2.sh` | monitoring | keycloak profile + lab overlay (audit router on `oauth2-proxy-auth`): redirect to Keycloak with PKCE, scripted login through `/oauth2/callback` back to the reports; other routers stay on basic auth |
 | `t3-pve-oidc.sh` | pve1 | the documented `pveum realm add` command, then a full login ending in a PVE ticket for `labuser@keycloak` |
 | `t3-pdm-oidc.sh` | monitoring | PDM OpenID realm through the API (the CLI has none), then a full login ending in a PDM ticket |
+
+## When `vagrant up` was interrupted
+
+Vagrant marks a VM as provisioned and records its synced folders early. If
+the first `vagrant up` of a VM is killed (Ctrl-C, a terminal timeout), the
+VM can be left without its lab network addresses, without the repo in
+`/opt/proxmox-biome`, and with provisioning skipped on the next `up`. The
+symptoms are `cannot assign requested address` for `10.77.10.x`, or phases
+failing with `No such file`. Don't patch the VM by hand; recreate it:
+
+```bash
+cd tests/lab && TIER=1 vagrant destroy -f monitoring && TIER=1 vagrant up monitoring
+```
+
+Run long `make lab-up` calls in `tmux` or `nohup` so they can't be cut off.
+`run.sh` stops with `FATAL: the repo is not synced into <vm>` rather than
+reporting every phase as failed.

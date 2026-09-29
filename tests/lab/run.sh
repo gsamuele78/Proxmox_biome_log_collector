@@ -27,7 +27,18 @@ host_check() {  # host_check "description" expect(ok|fail) command...
 e2e=/opt/proxmox-biome/tests/e2e
 echo "== biome lab run, TIER=${TIER}"
 vagrant rsync
-
+# `vagrant rsync` silently skips a VM whose synced-folder metadata was never
+# written (an interrupted first `vagrant up`), and every phase would then
+# fail with "No such file". Sync such a VM by name, or stop here.
+vms=(monitoring)
+((TIER >= 1)) && vms+=(pve1)
+((TIER >= 2)) && vms+=(pve2 pve3)
+for vm in "${vms[@]}"; do
+  vagrant ssh "${vm}" -c "test -f ${e2e}/lib.sh" 2>/dev/null && continue
+  vagrant rsync "${vm}"
+  vagrant ssh "${vm}" -c "test -f ${e2e}/lib.sh" 2>/dev/null \
+    || { echo "FATAL: the repo is not synced into ${vm} (${e2e}/lib.sh missing)"; exit 1; }
+done
 phase "t0 smoke test + secret file modes" monitoring "bash ${e2e}/t0-smoke.sh"
 
 token=""
