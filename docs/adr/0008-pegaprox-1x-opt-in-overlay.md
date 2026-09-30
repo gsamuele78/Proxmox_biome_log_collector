@@ -35,7 +35,8 @@ stack.
 
 Keep PegaProx as the opt-in `docker-compose.pegaprox.yml` overlay, pinned to
 1.2.0, fixed to match the image (`/app/config` and `/app/logs` volumes,
-`PEGAPROX_BEHIND_PROXY=true`, trusted proxies = the edge subnet, a Python
+`PEGAPROX_BEHIND_PROXY=true` plus `PEGAPROX_HOST=0.0.0.0` (behind-proxy
+mode otherwise binds 127.0.0.1, unreachable for Traefik), trusted proxies = the edge subnet, a Python
 healthcheck on `/api/health`), and drop the EXPERIMENTAL/BETA wording. It is
 proven by the lab phase `tests/e2e/t1-pegaprox.sh`.
 

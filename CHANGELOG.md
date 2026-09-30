@@ -78,11 +78,17 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Grafana provisioned no file dashboard at all while
+  `config/grafana/provisioning/dashboards/files/` was missing (a fresh
+  clone before `fetch-community-dashboards.sh`): the failing provider
+  stopped the committed cv4pve dashboard too. The directory is now tracked
+  (`.gitkeep`) and the bootstrap creates it.
 - The PegaProx overlay could not have worked: it mounted its volume at
   `/data` while the image keeps its state in `/app/config` and `/app/logs`
   (so config lived in anonymous volumes, lost on recreate), its `wget`
   healthcheck can't run in the image, and PegaProx served HTTPS to
-  Traefik's plain-HTTP backend. **Upgrade** (only if you enabled it): the
+  Traefik's plain-HTTP backend, bound to 127.0.0.1 only (`PEGAPROX_HOST`
+  is now `0.0.0.0`). **Upgrade** (only if you enabled it): the
   old `pegaprox-data` volume holds nothing; remove it with
   `docker volume rm <project>_pegaprox-data` after bringing the overlay up
   again.

@@ -65,6 +65,12 @@ else
   log "WARNING: not running as root, so ${am_config} (contains SMTP credentials) is left world-readable (644) for the container's nobody user. Re-run as root to tighten it to root:65534 640."
 fi
 
+# Grafana's community-dashboard provider points here. If the directory is
+# missing (fresh clone, fetch-community-dashboards.sh not run yet), Grafana
+# fails that provider and provisions no file dashboard at all, including
+# the committed cv4pve one.
+mkdir -p config/grafana/provisioning/dashboards/files
+
 for f in config/prometheus/targets/proxmox-nodes.json config/prometheus/targets/ceph-mgr.json; do
   if [[ ! -f "${f}" ]]; then
     log "Seeding ${f} from ${f}.example — edit it with real node hostnames before scraping will work."

@@ -26,7 +26,7 @@ RSYNC_EXCLUDE = [
   "config/traefik/dynamic/.htpasswd",
   "config/alertmanager/alertmanager.yml",
   "config/prometheus/targets/*.json",
-  "config/grafana/provisioning/dashboards/files/",
+  "config/grafana/provisioning/dashboards/files/*.json",
 ]
 
 # name, mgmt IP, RAM (MB). pve1 is the cluster founder and the API endpoint.

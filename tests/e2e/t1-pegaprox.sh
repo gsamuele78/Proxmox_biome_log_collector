@@ -29,9 +29,11 @@ else
   fail "pegaprox mounts: ${mounts}"
 fi
 
-expect_code "PegaProx via Traefik without credentials -> 401" 401 pegaprox /api/health
-expect_code "PegaProx /api/health via Traefik with basic auth -> 200 (plain HTTP backend)" 200 \
-  pegaprox /api/health -u "$(basic_auth)"
+# Traefik adds a container's router only once it is healthy, so wait.
+code_is() { [[ "$(https_code pegaprox /api/health "${@:2}")" == "$1" ]]; }
+wait_for "PegaProx via Traefik without credentials -> 401" 60 code_is 401
+wait_for "PegaProx /api/health via Traefik with basic auth -> 200 (plain HTTP backend, not 502)" 60 \
+  code_is 200 -u "$(basic_auth)"
 
 config_files() { "${overlay[@]}" exec -T pegaprox sh -c 'ls -A /app/config' 2>/dev/null | sort; }
 before="$(config_files)"

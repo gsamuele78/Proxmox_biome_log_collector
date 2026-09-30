@@ -44,7 +44,7 @@ while IFS= read -r expr; do
   total=$((total + 1))
   expr="${expr//\$node/.*}"
   resp="$(docker compose exec -T prometheus wget -qO- \
-    "http://localhost:9090/api/v1/query?query=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "${expr}")")"
+    "http://localhost:9090/api/v1/query?query=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "${expr}")" </dev/null)"
   if [[ "$(jq -r .status <<<"${resp}")" != success ]]; then
     bad=$((bad + 1)); echo "  invalid: ${expr}"
   elif [[ "$(jq '.data.result | length' <<<"${resp}")" -eq 0 ]]; then

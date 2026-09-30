@@ -22,6 +22,9 @@ services:
       # Plain HTTP on :5000 for Traefik; without this PegaProx serves its own
       # self-signed HTTPS there and Traefik's HTTP backend gets garbage.
       PEGAPROX_BEHIND_PROXY: "true"
+      # Behind-proxy mode binds 127.0.0.1 unless told otherwise (app.py), which
+      # Traefik, in another container, can't reach (502).
+      PEGAPROX_HOST: "0.0.0.0"
       # Traefik's address on the edge network (subnet pinned in docker-compose.yml).
       PEGAPROX_TRUSTED_PROXIES: "172.28.0.0/24"
       PEGAPROX_ALLOWED_ORIGINS: "https://pegaprox.${BASE_DOMAIN}"

@@ -57,9 +57,13 @@ done
 # Alertmanager -> SMTP -> Mailpit, without waiting for a real rule: inject
 # a synthetic alert straight into Alertmanager (group_wait is 30s).
 curl -sf -X DELETE http://10.77.10.10:8025/api/v1/messages >/dev/null || true
+# A unique label per run: an identical alert fired again within
+# repeat_interval (1h for critical) is deduplicated, correctly, and a re-run
+# on the same VM would wait for a mail that never comes. The group may also
+# already exist, so allow for one group_interval (5m) flush.
 docker compose exec -T alertmanager amtool alert add LabSyntheticAlert severity=critical \
-  instance=lab summary="biome lab SMTP path" --alertmanager.url=http://localhost:9093 >/dev/null
-wait_for "Alertmanager delivered a mail to the SMTP sink (rendered smtp_* settings work)" 120 \
+  instance=lab run="$(date +%s)" 'summary="biome lab SMTP path"' --alertmanager.url=http://localhost:9093 >/dev/null
+wait_for "Alertmanager delivered a mail to the SMTP sink (rendered smtp_* settings work)" 360 \
   mailpit_has LabSyntheticAlert
 
 rules_loaded() {
