@@ -152,7 +152,9 @@ Traefik, oauth2-proxy or Loki). Write this rule in `CONTRIBUTING.md`.
 **Status 2026-09-30:** the cv4pve dashboard is done
 (`config/grafana/provisioning/dashboards/cv4pve/`, every query checked in
 the lab). The exporter's "Null values" error did not appear in any lab run.
-The lab's Let's Encrypt noise and an internal-CA lab phase are still open.
+The internal-CA path is now tested (`tests/e2e/t1-internal-ca.sh`, after
+0.3.0) and was broken as documented; the lab's Let's Encrypt noise remains
+in the default ACME configuration by design.
 
 - cv4pve-metrics-exporter 2.0.0 once logged "Null values are not supported
   for metric label names" in `WriteNodeAssignmentMetrics`. It did not
