@@ -37,6 +37,18 @@ the audit again by hand before a 1.0.
 | 13 | Lab | `vagrant up` failed when apt was locked (apt-daily at first boot, or a previous interrupted run) | wrong (lab) | `DPkg::Lock::Timeout` in `tests/lab/provision/common.sh` |
 | 14 | Lab | After an interrupted first `vagrant up`, `vagrant rsync` silently skipped the VM and every phase failed with `No such file` | wrong (lab) | `run.sh` syncs such a VM by name or stops with `FATAL`; recovery in [tests/lab/README.md](../tests/lab/README.md) |
 
+### 0.3.0 pass (2026-09-30)
+
+| # | Area | Finding | Severity | Fixed by |
+| --- | --- | --- | --- | --- |
+| 15 | PegaProx overlay | Never worked: volume at `/data` (image uses `/app/config`, `/app/logs`), `wget` healthcheck in an image without wget, HTTPS backend, and in behind-proxy mode a 127.0.0.1 bind | wrong | 1.2.0 overlay, `t1-pegaprox.sh`, ADR-0008 |
+| 16 | Grafana | With `dashboards/files/` missing (fresh clone), provisioning failed for every file dashboard | wrong | tracked `.gitkeep`, bootstrap `mkdir -p` |
+| 17 | Smoke test | Checked "exporter running" while it restart-loops with no PVE: flaky | wrong (test) | checks the exporter tried its host |
+| 18 | Trivy | Unfixable HIGHs (no distro fix yet) blocked every build | policy | fail on fixable only, list unfixed |
+| 19 | gitleaks | Pinned `oauth2-proxy` image line matched `generic-api-key` | false positive | line allowlist for `image:` lines |
+| 20 | Lab | Re-running `t0-deploy.sh` on the same VM waited for a mail Alertmanager rightly deduplicated | wrong (test) | unique label per run |
+| 21 | `.env.example` | A stray line made compose refuse the file (introduced and caught in this pass) | wrong | drift check validates every line |
+
 ## Lab result
 
 2026-09-29, on VMs built that day:
@@ -47,6 +59,10 @@ the audit again by hand before a 1.0.
   cluster with Ceph, mgr failover, `CephOSDDown` and `ProxmoxNodeDown`
   firing and mailed, cv4pve-diag host fallback, recovery.
 - Tier 3 (Keycloak) was not run in this pass.
+- 0.3.0, 2026-09-30, VMs rebuilt from clean: `make lab-test TIER=3` passed
+  every phase except the two that found findings 15 and 16; after the
+  fixes, `make lab-test TIER=1` passed all 9 phases (including
+  `t1-pegaprox.sh` and the dashboard queries).
 
 The deployed stack needed no fix at tiers 1-2. Findings 1-12 came from
 reading the repo and the CI history; 13 and 14 are in the lab tooling.

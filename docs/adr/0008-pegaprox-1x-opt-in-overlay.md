@@ -1,7 +1,7 @@
 # ADR-0008: PegaProx 1.x stays an opt-in overlay, no longer "experimental"
 
-Status: Proposed
-Date: 2026-09-29
+Status: Accepted
+Date: 2026-09-30
 
 Supersedes the PegaProx half of
 [ADR-0005](0005-cv4pve-diag-default-pegaprox-experimental.md). The

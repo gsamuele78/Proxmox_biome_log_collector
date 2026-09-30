@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-30
+
 ### Added
 
 - CI job `deploy-e2e`: runs `tests/e2e/t0-deploy.sh` (the documented root
