@@ -2,6 +2,16 @@
 ## for older admin browsers). See docs/hardening.md#tls.
 
 tls:
+  ## Internal CA instead of Let's Encrypt, for a BASE_DOMAIN that is not
+  ## publicly resolvable (ACME HTTP-01 can't reach it). Put the certificate
+  ## (wildcard *.BASE_DOMAIN, or one SAN per hostname, full chain) and its key
+  ## in config/traefik/certs/ (mounted read-only at /certs, gitignored), then
+  ## uncomment these three lines, keeping their indentation under `tls:`.
+  ## See docs/deployment-guide.md#tls-certificates.
+  # certificates:
+  #   - certFile: /certs/monitoring-vm.crt
+  #     keyFile: /certs/monitoring-vm.key
+
   options:
     modern:
       minVersion: VersionTLS12
@@ -16,12 +26,3 @@ tls:
         - X25519
         - CurveP256
       sniStrict: true
-
-## If BASE_DOMAIN is not a publicly-resolvable name, ACME/Let's Encrypt cannot
-## issue a certificate (no HTTP-01 challenge path from the internet). In that
-## case, mount your internal CA-issued cert/key here instead and remove the
-## `certresolver` label from services in docker-compose.yml. See
-## docs/deployment-guide.md#tls-certificates.
-# certificates:
-#   - certFile: /certs/monitoring-vm.crt
-#     keyFile: /certs/monitoring-vm.key

@@ -21,6 +21,10 @@ pegaprox-data/
 pdm-config/
 pdm-data/
 
+# Internal-CA certificate and key for Traefik (docs/deployment-guide.md#tls-certificates)
+config/traefik/certs/*
+!config/traefik/certs/.gitkeep
+
 # Fetched (not hand-authored) Grafana dashboards — pulled fresh by scripts/fetch-community-dashboards.sh
 config/grafana/provisioning/dashboards/files/*.json
 

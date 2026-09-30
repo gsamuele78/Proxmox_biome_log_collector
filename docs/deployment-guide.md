@@ -240,11 +240,19 @@ If `BASE_DOMAIN` is **not** publicly resolvable (e.g. an internal-only
 name like the `.env.example` default), ACME cannot issue a certificate.
 Use your internal CA instead:
 
-1. Issue a certificate/key pair for `BASE_DOMAIN` (and its `*.BASE_DOMAIN`
-   subdomains, or one per hostname) from your internal CA.
-2. Mount them into the Traefik container and uncomment the `certificates:`
-   block in `config/traefik/dynamic/tls-options.yml`.
-3. Remove `tls.certresolver: letsencrypt` from every router label in
-   `docker-compose.yml` (keep `tls: {}` so HTTPS itself stays enabled).
+1. Issue a certificate for `*.BASE_DOMAIN` (or one SAN per hostname:
+   `grafana.`, `prometheus.`, `alertmanager.`, `audit.`, `pdm.`, `traefik.`)
+   from your internal CA. Use the full chain in the certificate file.
+2. Put them in `config/traefik/certs/` as `monitoring-vm.crt` and
+   `monitoring-vm.key` (the directory is mounted read-only at `/certs` and
+   gitignored), `chmod 600` the key.
+3. Uncomment the three `certificates:` lines near the top of
+   `config/traefik/dynamic/tls-options.yml`, keeping their indentation under
+   `tls:`, then `docker compose restart traefik`.
+
+Leave the `tls.certresolver=letsencrypt` router labels alone: with a
+matching certificate in its store, Traefik serves it and makes no ACME
+request. The lab phase `tests/e2e/t1-internal-ca.sh` checks exactly these
+steps (certificate verified against the CA, no Let's Encrypt traffic).
 
 See `docs/troubleshooting.md` if certificate issuance fails.

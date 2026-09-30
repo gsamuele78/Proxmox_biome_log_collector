@@ -72,6 +72,7 @@ on any failure. Logs go to `tests/lab/artifacts/`.
 | 1 | `t1-monitoring.sh` | monitoring | the real node scraped, cv4pve against the real PVE API, the cv4pve dashboard provisioned and every one of its queries valid on real metrics, node logs in Loki, PDM firewall and Traefik route, cv4pve-diag timer and report |
 | 1 | `t1-pve-reachability.sh` | pve1 | PDM `:8443` blocked from the management LAN, Loki and Traefik reachable |
 | 1 | `t1-pegaprox.sh` | monitoring | the opt-in PegaProx overlay: healthy, the image's own volumes, 401/200 through Traefik, config kept across a recreate; stopped again afterwards |
+| 1 | `t1-internal-ca.sh` | monitoring | the deployment guide's internal-CA TLS steps: the certificate is served and verifies against the CA, and Traefik stops asking Let's Encrypt; the default is restored afterwards |
 | 1 | (host checks in `run.sh`) | host | on the perimeter address only `:443` answers |
 | 1 | `t1-after-reboot.sh` | monitoring | firewall and stack come back after `vagrant reload` |
 | 2 | `t2-cluster.sh` | pve1 | quorate 3-node cluster, Ceph `HEALTH_OK`, `enable-ceph-prometheus.sh` idempotent |
@@ -134,8 +135,8 @@ When it fails, fix the side that is wrong. Don't weaken the check.
 
 ## Known gaps
 
-- No automated test for real Let's Encrypt issuance or an internal-CA
-  certificate (`config/traefik/dynamic/tls-options.yml`).
+- No automated test for real Let's Encrypt issuance (the lab domain is not
+  public); the internal-CA path is tested.
 - PegaProx is tested up to its own health endpoint; adding a cluster to it
   through its API is not automated.
 - The two community Grafana dashboards are fetched at deploy time

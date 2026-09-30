@@ -6,6 +6,22 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Lab phase `tests/e2e/t1-internal-ca.sh`: the internal-CA TLS path of the
+  deployment guide, end to end.
+
+### Fixed
+
+- Internal-CA TLS: the commented `certificates:` block in
+  `config/traefik/dynamic/tls-options.yml` sat at the top level, so
+  uncommenting it as told produced a key Traefik ignores; it is now under
+  `tls:`. Nothing mounted `/certs`, the path it names: compose now mounts
+  `config/traefik/certs/` there (gitignored). The guide's step "remove
+  `certresolver` from every router label" was unnecessary and is gone: the
+  lab shows Traefik makes no ACME request once a matching certificate is
+  in its store.
+
 ### Changed
 
 - cv4pve Dockerfiles use the numeric `65532:65532` for `USER` and

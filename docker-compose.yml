@@ -110,6 +110,9 @@ services:
     volumes:
       - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
+      # Internal-CA certificates, used instead of Let's Encrypt when
+      # BASE_DOMAIN is not public (config/traefik/dynamic/tls-options.yml).
+      - ./config/traefik/certs:/certs:ro
       - traefik-acme:/letsencrypt
       - traefik-logs:/var/log/traefik
     networks:
