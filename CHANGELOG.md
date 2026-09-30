@@ -97,6 +97,9 @@ follows [Semantic Versioning](https://semver.org/).
   binary). Both jobs, and the commands in `tests/README.md`, now use
   `--entrypoint`. The README's `rules/*.yml` glob was also expanded by the
   host shell against a container path; it now lists the files.
+- Smoke test was flaky: with no PVE reachable, cv4pve-metrics-exporter
+  exits and Docker restarts it, so "is it running" depended on timing. It
+  now checks that the exporter started and tried its configured host.
 - Lab: `vagrant up` failed on a held apt lock (apt-daily at first boot, or
   an interrupted run); provisioning now waits for the lock. `run.sh`
   re-syncs a VM that `vagrant rsync` skipped, or stops with a clear error
