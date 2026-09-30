@@ -7,7 +7,7 @@
 ## and copies the single self-contained binary into a minimal distroless
 ## final stage. `ldd` on the extracted binary confirmed it only depends on
 ## glibc/libstdc++/libgcc_s/libpthread/libm/libdl/librt — exactly what
-## gcr.io/distroless/cc-debian13 provides, nothing more.
+## gcr.io/distroless/cc-debian12 provides, nothing more.
 
 FROM debian:trixie-20260918-slim AS builder
 
@@ -49,7 +49,7 @@ RUN /build/cv4pve-metrics-exporter create-settings --full -o /build/settings.jso
     && sed -i 's/"Host": "localhost"/"Host": "+"/' /build/settings.json \
     && grep -q '"Host": "+"' /build/settings.json
 
-FROM gcr.io/distroless/cc-debian13:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot
 
 COPY --from=builder --chown=nonroot:nonroot /build/cv4pve-metrics-exporter /usr/bin/cv4pve-metrics-exporter
 COPY --from=builder --chown=nonroot:nonroot /build/settings.json /etc/cv4pve/settings.json

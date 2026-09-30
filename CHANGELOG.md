@@ -50,8 +50,10 @@ follows [Semantic Versioning](https://semver.org/).
   nothing breaks here; if you added an `--ignored-issues-file`, add the new
   `C` codes to it.
 - The cv4pve images build from a dated `debian:trixie-20260918-slim` (was
-  the floating `trixie-slim`) and run on `gcr.io/distroless/cc-debian13`
-  (was Debian 12, now matching the builder; the binaries need glibc 2.27).
+  the floating `trixie-slim`), so builds are reproducible. The runtime stays
+  on `gcr.io/distroless/cc-debian12`: `cc-debian13` works (the binaries
+  need glibc 2.27) but still ships `libssl3t64` 3.5.7-1~deb13u2, a HIGH
+  (CVE-2026-75804) that Trivy fails on. Move once distroless rebuilds.
 - PegaProx is no longer labelled EXPERIMENTAL (ADR-0008).
 - `make validate` now runs `promtool` and `amtool` like CI (it only ran
   `docker compose config`); `make lint` also runs the two new checks.

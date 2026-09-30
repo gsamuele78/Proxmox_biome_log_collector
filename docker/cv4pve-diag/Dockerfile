@@ -38,7 +38,7 @@ RUN curl -fsSL -o cv4pve-diag.deb "${CV4PVE_DEB_URL}" \
     && install -m 0755 -o root -g root /build/extracted/usr/bin/cv4pve-diag /build/cv4pve-diag \
     && mkdir -p /build/reports
 
-FROM gcr.io/distroless/cc-debian13:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot
 
 COPY --from=builder --chown=nonroot:nonroot /build/cv4pve-diag /usr/bin/cv4pve-diag
 # Mount point for the cv4pve-diag-reports named volume. It must exist in the

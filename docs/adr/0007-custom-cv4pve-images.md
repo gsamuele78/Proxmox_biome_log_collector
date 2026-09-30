@@ -21,8 +21,10 @@ Build minimal custom images (`docker/cv4pve-diag/Dockerfile`,
    (`ARG CV4PVE_VERSION`), verifies it against a SHA-256 checksum computed
    directly from that release asset (`ARG CV4PVE_DEB_SHA256`) rather than
    trusting the download blindly, and extracts the single binary.
-2. A `gcr.io/distroless/cc-debian13:nonroot` final stage (Debian 12 until
-   0.3.0; the binaries need glibc 2.27 at most, so either works) copies in just that
+2. A `gcr.io/distroless/cc-debian12:nonroot` final stage. The binaries
+   need glibc 2.27 at most, so `cc-debian13` also works; it was tried for
+   0.3.0 and held back because its `libssl3t64` had an unfixed HIGH
+   (CVE-2026-75804) that Trivy fails the build on copies in just that
    binary (`ldd`-verified to depend only on glibc/libstdc++/libgcc_s/
    libpthread/libm/libdl/librt — exactly what that distroless base
    provides) — no shell, no package manager, no unrelated tooling shipped.
