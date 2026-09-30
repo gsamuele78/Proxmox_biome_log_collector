@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- cv4pve Dockerfiles use the numeric `65532:65532` for `USER` and
+  `--chown` (distroless `nonroot`, the UID compose already runs them as).
+  Newer hadolint (DL3066) rejects a non-numeric `USER`. No effect on the
+  images.
+
 ## [0.3.0] - 2026-09-30
 
 ### Added

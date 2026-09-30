@@ -51,10 +51,10 @@ RUN /build/cv4pve-metrics-exporter create-settings --full -o /build/settings.jso
 
 FROM gcr.io/distroless/cc-debian12:nonroot
 
-COPY --from=builder --chown=nonroot:nonroot /build/cv4pve-metrics-exporter /usr/bin/cv4pve-metrics-exporter
-COPY --from=builder --chown=nonroot:nonroot /build/settings.json /etc/cv4pve/settings.json
+COPY --from=builder --chown=65532:65532 /build/cv4pve-metrics-exporter /usr/bin/cv4pve-metrics-exporter
+COPY --from=builder --chown=65532:65532 /build/settings.json /etc/cv4pve/settings.json
 
-USER nonroot
+USER 65532:65532
 EXPOSE 9221
 ENTRYPOINT ["/usr/bin/cv4pve-metrics-exporter"]
 CMD ["--help"]
