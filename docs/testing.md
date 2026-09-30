@@ -107,9 +107,9 @@ Shared helpers (`check`, `wait_for`, `expect_code`, `prom_true`,
 
 - an alert in `config/prometheus/rules/` has no row in the runbook's
   [alert catalogue](runbook-incident-response.md#alert-catalogue);
-- a `${VAR}` read by the compose files or the Alertmanager template is
-  missing from `.env.example`, or `.env.example` declares a variable
-  nothing reads;
+- a line of `.env.example` is neither a comment nor `KEY=value`, a
+  `${VAR}` read by the compose files or the Alertmanager template is
+  missing from it, or it declares a variable nothing reads;
 - a `prom/prometheus` or `prom/alertmanager` tag in CI, `tests/README.md`
   or the `Makefile` differs from `docker-compose.yml`, or a cv4pve image
   tag differs from its Dockerfile's `CV4PVE_VERSION`;
