@@ -38,16 +38,16 @@ validate:
 	docker compose config --quiet
 	docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml config --quiet
 	docker run --rm --entrypoint promtool -v "$(CURDIR)/config/prometheus:/config:ro" \
-	  prom/prometheus:v3.13.2 check config /config/prometheus.yml
+	  prom/prometheus:v3.15.0 check config /config/prometheus.yml
 	docker run --rm --entrypoint promtool -v "$(CURDIR)/config/prometheus:/config:ro" \
-	  prom/prometheus:v3.13.2 check rules /config/rules/proxmox.rules.yml \
+	  prom/prometheus:v3.15.0 check rules /config/rules/proxmox.rules.yml \
 	  /config/rules/ceph.rules.yml /config/rules/monitoring.rules.yml
 	ALERTMANAGER_SMTP_SMARTHOST=smtp.invalid:587 ALERTMANAGER_SMTP_FROM=a@smoketest.internal \
 	  ALERTMANAGER_SMTP_USERNAME=x ALERTMANAGER_SMTP_PASSWORD=x ALERTMANAGER_SMTP_REQUIRE_TLS=true \
 	  ALERTMANAGER_RECEIVER_EMAIL=b@smoketest.internal \
 	  envsubst < config/alertmanager/alertmanager.yml.tmpl > /tmp/biome-alertmanager.yml
 	docker run --rm --entrypoint amtool -v /tmp/biome-alertmanager.yml:/config/alertmanager.yml:ro \
-	  prom/alertmanager:v0.33.1 check-config /config/alertmanager.yml
+	  prom/alertmanager:v0.34.1 check-config /config/alertmanager.yml
 
 test:
 	tests/integration/smoke-test.sh

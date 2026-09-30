@@ -9,7 +9,7 @@
 ## glibc/libstdc++/libgcc_s/libpthread/libm/libdl/librt — exactly what
 ## gcr.io/distroless/cc-debian12 provides, nothing more.
 
-FROM debian:trixie-slim AS builder
+FROM debian:trixie-20260918-slim AS builder
 
 ARG CV4PVE_VERSION=2.0.0
 ARG CV4PVE_DEB_SHA256=d67d16bb91894a201968eb15ed79086036edf6085d4dc8a4d3a042b02b7859fb

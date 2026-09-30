@@ -28,11 +28,11 @@ jobs:
       - name: promtool check config
         run: |
           docker run --rm --entrypoint promtool -v "$PWD/config/prometheus:/config:ro" \
-            prom/prometheus:v3.13.2 check config /config/prometheus.yml
+            prom/prometheus:v3.15.0 check config /config/prometheus.yml
       - name: promtool check rules
         run: |
           docker run --rm --entrypoint promtool -v "$PWD/config/prometheus:/config:ro" \
-            prom/prometheus:v3.13.2 check rules /config/rules/proxmox.rules.yml /config/rules/ceph.rules.yml \
+            prom/prometheus:v3.15.0 check rules /config/rules/proxmox.rules.yml /config/rules/ceph.rules.yml \
             /config/rules/monitoring.rules.yml
 
   amtool:
@@ -51,7 +51,7 @@ jobs:
       - name: amtool check-config
         run: |
           docker run --rm -v /tmp/alertmanager.yml:/config/alertmanager.yml:ro \
-            --entrypoint amtool prom/alertmanager:v0.33.1 check-config /config/alertmanager.yml
+            --entrypoint amtool prom/alertmanager:v0.34.1 check-config /config/alertmanager.yml
 
   smoke-test:
     runs-on: ubuntu-latest

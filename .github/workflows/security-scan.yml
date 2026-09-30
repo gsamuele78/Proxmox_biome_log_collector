@@ -47,15 +47,34 @@ jobs:
         run: |
           cp .env.example .env
           docker compose --profile tools build
-      - name: Scan cv4pve-metrics-exporter image
+      # Fail on CRITICAL/HIGH findings that have a fix (rebuild or bump to
+      # get it). Findings with no fix anywhere yet are listed, not failed:
+      # nothing in this repo can act on them until the distro ships a fix.
+      - name: Scan cv4pve-metrics-exporter image (fixable, fails)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: proxmox-biome/cv4pve-metrics-exporter:2.0.0
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
           exit-code: "1"
-      - name: Scan cv4pve-diag image
+      - name: Scan cv4pve-diag image (fixable, fails)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: proxmox-biome/cv4pve-diag:2.4.0
+          image-ref: proxmox-biome/cv4pve-diag:2.7.0
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
           exit-code: "1"
+      - name: Unfixed CRITICAL/HIGH findings in cv4pve-metrics-exporter (report only)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: proxmox-biome/cv4pve-metrics-exporter:2.0.0
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+      - name: Unfixed CRITICAL/HIGH findings in cv4pve-diag (report only)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: proxmox-biome/cv4pve-diag:2.7.0
+          severity: CRITICAL,HIGH
+          exit-code: "0"

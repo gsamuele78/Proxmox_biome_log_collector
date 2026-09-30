@@ -20,41 +20,31 @@ then reintroduce the alert rule against its actual metric.
 
 ## PegaProx VNC/SSH-websocket console routing
 
-ADR-0005 keeps PegaProx opt-in and explicitly does **not** route its VNC
+ADR-0008 keeps PegaProx opt-in and explicitly does **not** route its VNC
 console (`:5001`) or SSH-over-websocket (`:5002`) ports through Traefik —
 only its main web UI (`:5000`). Console access via those ports needs
 sticky-session / websocket-upgrade handling that wasn't validated as part
 of the initial build.
 
-**Plan**: once PegaProx graduates past EXPERIMENTAL/BETA status (per
-ADR-0005's stated re-evaluation trigger), add Traefik routers for `:5001`/
-`:5002` with `websocket` middleware support tested end-to-end against a
-real console session, not just the main UI.
+**Plan**: PegaProx is on stable 1.x since ADR-0008. Next, add Traefik
+routers for `:5001`/`:5002` with websocket support, tested end-to-end in
+the lab against a real console session (extend `tests/e2e/t1-pegaprox.sh`),
+and automate adding the lab cluster through PegaProx's API.
 
-## Native `cv4pve_*` Grafana dashboard
+## Guest monitoring from inside the VMs
 
-`scripts/fetch-community-dashboards.sh` pulls two verified official
-dashboards (Node Exporter Full #1860, Ceph Cluster #2842). No official
-Grafana dashboard exists for `cv4pve-metrics-exporter`'s
-`cv4pve_*` metric namespace — dashboard #10347 is built for the older,
-different `prometheus-pve-exporter` project, and Corsinvest's own
-dashboard #12910 targets their separate InfluxDB-based `cv4pve-metrics`
-stack, not the Prometheus-based exporter this repo uses. Both were
-verified and ruled out rather than used on the assumption they'd fit.
+The `Proxmox cluster and guests (cv4pve)` dashboard (0.3.0,
+`config/grafana/provisioning/dashboards/cv4pve/`) shows every VM and LXC
+from the PVE API, without an agent in the guest. What is still missing is
+the inside view: guest logs (journal, `/var/log`, Windows Event Log) and
+in-guest metrics (filesystems, services), plus alert rules on guests
+(stopped unexpectedly, no backup job, memory near the limit).
 
-**Input now available**: `tests/lab` records the real metric names from
-a PVE 9.2 node in `tests/lab/artifacts/monitoring/cv4pve-metric-names.txt`
-(44 names: `cv4pve_node_*`, `cv4pve_guest_*`, `cv4pve_ha_quorate`,
-`cv4pve_guests_not_backed_up`, ...).
-
-**Plan**: hand-build a dashboard against `cv4pve-metrics-exporter`'s
-actual exposed metric names (inspect `https://prometheus.${BASE_DOMAIN}/`
-→ `cv4pve_*` after the exporter has been running against a real cluster)
-covering VM/LXC/storage-object state that `node_exporter` and Ceph's own
-exporter don't surface. Commit it as
-`config/grafana/provisioning/dashboards/files/cv4pve-overview.json` (this
-one *should* be committed, unlike the fetched community ones, since
-there's no upstream source to re-fetch it from).
+**Plan**: a Grafana Alloy agent in each guest, pushing logs to Loki and
+metrics to Prometheus (remote write), labelled with the `vmid` so Grafana
+can link the outside and inside views. This lets guests reach the
+monitoring VM, which changes the trust boundary (Loki listens only on the
+management LAN today), so it needs an ADR first.
 
 ## Verification gaps to close on real hardware / CI
 

@@ -65,6 +65,12 @@ else
   log "WARNING: not running as root, so ${am_config} (contains SMTP credentials) is left world-readable (644) for the container's nobody user. Re-run as root to tighten it to root:65534 640."
 fi
 
+# Grafana's community-dashboard provider points here. If the directory is
+# missing (fresh clone, fetch-community-dashboards.sh not run yet), Grafana
+# fails that provider and provisions no file dashboard at all, including
+# the committed cv4pve one.
+mkdir -p config/grafana/provisioning/dashboards/files
+
 for f in config/prometheus/targets/proxmox-nodes.json config/prometheus/targets/ceph-mgr.json; do
   if [[ ! -f "${f}" ]]; then
     log "Seeding ${f} from ${f}.example — edit it with real node hostnames before scraping will work."
@@ -82,5 +88,5 @@ log "Starting core stack..."
 docker compose up -d
 
 log "Done. Check status with: docker compose ps"
-log "PegaProx (optional, experimental) is not started — see docs/adr/0005 and README for the opt-in overlay command."
+log "PegaProx (optional overlay) is not started — see docs/adr/0008 for the opt-in command."
 log "Keycloak forwardAuth (Phase 2) is not started — see docs/keycloak-integration.md."

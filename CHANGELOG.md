@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-30
+
 ### Added
 
 - CI job `deploy-e2e`: runs `tests/e2e/t0-deploy.sh` (the documented root
@@ -27,9 +29,45 @@ follows [Semantic Versioning](https://semver.org/).
   (change, bump, release and upgrade procedures), `AGENTS.md`,
   [docs/repo-audit.md](docs/repo-audit.md), an alert catalogue in the
   runbook, README status and version badges.
+- `.github/dependabot.yml`: weekly grouped PRs for the compose images, the
+  Dockerfiles' base images and GitHub Actions. `upstream-versions.yml`:
+  weekly check of the cv4pve `.deb` versions, opening an issue (never a PR,
+  ADR-0007) when upstream has a new release.
+- Grafana dashboard `Proxmox cluster and guests (cv4pve)`
+  (`config/grafana/provisioning/dashboards/cv4pve/`, provisioned
+  automatically): cluster quorum, nodes, storage, every VM and LXC (CPU,
+  memory, disk and network I/O, uptime) and the guests with no backup job,
+  from the PVE API with no agent in the guests. The lab checks every query
+  against real metrics.
+- Lab phase `tests/e2e/t1-pegaprox.sh` and
+  [ADR-0008](docs/adr/0008-pegaprox-1x-opt-in-overlay.md).
 
 ### Changed
 
+- `trivy-images` fails only on CRITICAL/HIGH findings that have a fix, and
+  lists the unfixed ones in the job log. A HIGH with no fix in Debian 12's
+  OpenSSL (CVE-2026-84782, published 2026-09-29) otherwise blocks every
+  build with no possible action here; it stays visible and is re-checked
+  by the weekly run.
+- Images (checked against the registries on 2026-09-29): `traefik`
+  v3.7.9 → v3.7.13, `prom/prometheus` v3.13.2 → v3.15.0,
+  `prom/alertmanager` v0.33.1 → v0.34.1, `grafana/loki` 3.7.4 → 3.7.8,
+  `nginxinc/nginx-unprivileged` 1.31.3 → 1.31.6-alpine3.24,
+  `oauth2-proxy` v7.15.3 → v7.15.4-alpine, PegaProx 0.9.15 → 1.2.0.
+  Grafana 13.0.2, node-exporter v1.12.1, docker-socket-proxy v0.5.0 and
+  cv4pve-metrics-exporter 2.0.0 were already current.
+- cv4pve-diag 2.4.0 → 2.7.0. The `.deb` checksum was computed from the
+  release asset and matches the digest GitHub publishes for it. 2.7.0
+  renumbers findings: critical levels get their own `C` codes (`WN0027` →
+  `CN0027`), some codes are retired. This stack passes no ignore rules, so
+  nothing breaks here; if you added an `--ignored-issues-file`, add the new
+  `C` codes to it.
+- The cv4pve images build from a dated `debian:trixie-20260918-slim` (was
+  the floating `trixie-slim`), so builds are reproducible. The runtime stays
+  on `gcr.io/distroless/cc-debian12`: `cc-debian13` works (the binaries
+  need glibc 2.27) but still ships `libssl3t64` 3.5.7-1~deb13u2, a HIGH
+  (CVE-2026-75804) that Trivy fails on. Move once distroless rebuilds.
+- PegaProx is no longer labelled EXPERIMENTAL (ADR-0008).
 - `make validate` now runs `promtool` and `amtool` like CI (it only ran
   `docker compose config`); `make lint` also runs the two new checks.
 
@@ -37,9 +75,25 @@ follows [Semantic Versioning](https://semver.org/).
 
 - `TZ` from `.env.example`: nothing read it. An existing `.env` can keep
   it; it has no effect.
+- `PEGAPROX_ADMIN_EMAIL`: PegaProx never read it (its admin account is
+  created on first login).
 
 ### Fixed
 
+- Grafana provisioned no file dashboard at all while
+  `config/grafana/provisioning/dashboards/files/` was missing (a fresh
+  clone before `fetch-community-dashboards.sh`): the failing provider
+  stopped the committed cv4pve dashboard too. The directory is now tracked
+  (`.gitkeep`) and the bootstrap creates it.
+- The PegaProx overlay could not have worked: it mounted its volume at
+  `/data` while the image keeps its state in `/app/config` and `/app/logs`
+  (so config lived in anonymous volumes, lost on recreate), its `wget`
+  healthcheck can't run in the image, and PegaProx served HTTPS to
+  Traefik's plain-HTTP backend, bound to 127.0.0.1 only (`PEGAPROX_HOST`
+  is now `0.0.0.0`). **Upgrade** (only if you enabled it): the
+  old `pegaprox-data` volume holds nothing; remove it with
+  `docker volume rm <project>_pegaprox-data` after bringing the overlay up
+  again.
 - Deployment guide: new step 5a installs and enables the cv4pve-diag
   systemd timer. The guide never said to, so a deployment that followed it
   produced no compliance report. **Upgrade:** if
@@ -51,6 +105,9 @@ follows [Semantic Versioning](https://semver.org/).
   binary). Both jobs, and the commands in `tests/README.md`, now use
   `--entrypoint`. The README's `rules/*.yml` glob was also expanded by the
   host shell against a container path; it now lists the files.
+- Smoke test was flaky: with no PVE reachable, cv4pve-metrics-exporter
+  exits and Docker restarts it, so "is it running" depended on timing. It
+  now checks that the exporter started and tried its configured host.
 - Lab: `vagrant up` failed on a held apt lock (apt-daily at first boot, or
   an interrupted run); provisioning now waits for the lock. `run.sh`
   re-syncs a VM that `vagrant rsync` skipped, or stops with a clear error

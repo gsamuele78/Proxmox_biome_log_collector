@@ -121,14 +121,24 @@ for service in "${healthchecked_services[@]}"; do
   done
 done
 
-log "Checking cv4pve-metrics-exporter container is at least running (no healthcheck — distroless, see docker-compose.yml)..."
-exporter_status="$(docker inspect --format '{{.State.Status}}' "$(docker compose ps -q cv4pve-metrics-exporter)")"
-if [[ "${exporter_status}" != "running" ]]; then
-  echo "cv4pve-metrics-exporter is not running (status: ${exporter_status})" >&2
-  docker compose logs cv4pve-metrics-exporter || true
-  exit 1
-fi
-log "cv4pve-metrics-exporter: running"
+log "Checking cv4pve-metrics-exporter starts and uses its arguments (no healthcheck — distroless, see docker-compose.yml)..."
+# There is no PVE here, so the exporter exits on "No reachable hosts" and
+# Docker restarts it: its state flips between running and restarting, and
+# checking it was flaky. What this can prove is that the binary starts and
+# tries the host it was given; the real API path is lab tier 1.
+exporter_ok() {
+  docker compose logs cv4pve-metrics-exporter 2>&1 | grep -q "pve-smoketest.invalid"
+}
+deadline=$((SECONDS + 60))
+until exporter_ok; do
+  if [[ "${SECONDS}" -ge "${deadline}" ]]; then
+    echo "cv4pve-metrics-exporter never tried CV4PVE_EXPORTER_HOSTS (binary or arguments broken)" >&2
+    docker compose logs cv4pve-metrics-exporter || true
+    exit 1
+  fi
+  sleep 3
+done
+log "cv4pve-metrics-exporter: started, tried pve-smoketest.invalid"
 
 log "Curling Grafana through Traefik (self-signed fallback cert expected — ACME can't issue for a fake domain)..."
 if ! curl -sk -o /dev/null -w '%{http_code}' --resolve "grafana.smoketest.internal:443:127.0.0.1" \

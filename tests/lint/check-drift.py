@@ -51,6 +51,9 @@ DORMANT_VARS = {
 
 
 def check_env() -> None:
+    for n, line in enumerate(read(".env.example").splitlines(), 1):
+        if line.strip() and not line.startswith("#") and not re.match(r"^[A-Z][A-Z0-9_]*=", line):
+            problem("env", f".env.example:{n} is neither a comment nor KEY=value: {line!r}")
     declared = set(re.findall(r"^([A-Z][A-Z0-9_]*)=", read(".env.example"), re.M))
     consumers = ["docker-compose.yml", "docker-compose.pegaprox.yml", "config/alertmanager/alertmanager.yml.tmpl"]
     used: set[str] = set()

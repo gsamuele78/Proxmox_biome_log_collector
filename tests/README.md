@@ -32,9 +32,9 @@ docker compose -f docker-compose.yml -f docker-compose.pegaprox.yml config --qui
 # Prometheus config + alert rules
 # (--entrypoint: the images' ENTRYPOINT is the server binary, not the CLI)
 docker run --rm --entrypoint promtool -v "$PWD/config/prometheus:/config:ro" \
-  prom/prometheus:v3.13.2 check config /config/prometheus.yml
+  prom/prometheus:v3.15.0 check config /config/prometheus.yml
 docker run --rm --entrypoint promtool -v "$PWD/config/prometheus:/config:ro" \
-  prom/prometheus:v3.13.2 check rules /config/rules/proxmox.rules.yml \
+  prom/prometheus:v3.15.0 check rules /config/rules/proxmox.rules.yml \
   /config/rules/ceph.rules.yml /config/rules/monitoring.rules.yml
 
 # Alertmanager config (render the template first — it uses envsubst, not
@@ -42,7 +42,7 @@ docker run --rm --entrypoint promtool -v "$PWD/config/prometheus:/config:ro" \
 export $(grep -v '^#' .env | xargs) 2>/dev/null || true
 envsubst < config/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml
 docker run --rm -v /tmp/alertmanager.yml:/config/alertmanager.yml:ro \
-  --entrypoint amtool prom/alertmanager:v0.33.1 check-config /config/alertmanager.yml
+  --entrypoint amtool prom/alertmanager:v0.34.1 check-config /config/alertmanager.yml
 ```
 
 ## Integration smoke test

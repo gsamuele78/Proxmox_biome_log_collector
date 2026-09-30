@@ -10,7 +10,12 @@ paths = [
   '''config/prometheus/targets/.*\.json\.example$''',
   '''docs/.*''',
 ]
+# Matched against the whole line: a pinned image reference such as
+# `image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4-alpine` trips the
+# generic-api-key rule (keyword "oauth2" + a token-like tag).
+regexTarget = "line"
 regexes = [
   '''CHANGEME''',
   '''example\.(com|internal)''',
+  '''^\s*image:\s*[\w.\-/]+:[\w.\-]+\s*$''',
 ]

@@ -84,7 +84,7 @@ services:
           memory: 64M
 
   traefik:
-    image: traefik:v3.7.9
+    image: traefik:v3.7.13
     <<: *default-hardening
     cap_add:
       - NET_BIND_SERVICE
@@ -140,7 +140,7 @@ services:
   # ---------------------------------------------------------------------------
 
   prometheus:
-    image: prom/prometheus:v3.13.2
+    image: prom/prometheus:v3.15.0
     <<: *default-hardening
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -177,7 +177,7 @@ services:
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   alertmanager:
-    image: prom/alertmanager:v0.33.1
+    image: prom/alertmanager:v0.34.1
     <<: *default-hardening
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -275,7 +275,7 @@ services:
   # ---------------------------------------------------------------------------
 
   loki:
-    image: grafana/loki:3.7.4
+    image: grafana/loki:3.7.8
     <<: *default-hardening
     command:
       - -config.file=/etc/loki/loki-config.yaml
@@ -353,7 +353,7 @@ services:
   cv4pve-diag:
     build:
       context: ./docker/cv4pve-diag
-    image: proxmox-biome/cv4pve-diag:2.4.0
+    image: proxmox-biome/cv4pve-diag:2.7.0
     profiles:
       - tools
     <<: *default-hardening
@@ -381,7 +381,7 @@ services:
       - /tmp
 
   audit-report-server:
-    image: nginxinc/nginx-unprivileged:1.31.3-alpine3.24
+    image: nginxinc/nginx-unprivileged:1.31.6-alpine3.24
     <<: *default-hardening
     volumes:
       - ./config/audit-report-server/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -425,7 +425,7 @@ services:
   oauth2-proxy:
     # -alpine flavour: the default tag is distroless (no wget), which would
     # make the healthcheck below fail forever.
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.3-alpine
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4-alpine
     profiles:
       - keycloak
     <<: *default-hardening

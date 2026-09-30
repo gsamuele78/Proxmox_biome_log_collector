@@ -18,7 +18,7 @@ which one to run for a given change. For copy-paste commands see
 | Lab tier 1 | A real PVE 9 node: node-setup scripts, real scrape and PVE API, logs in Loki, PDM and its firewall, reboot survival | Local libvirt | `make lab-up && make lab-test` | 15 + 15 min |
 | Lab tier 2 | A 3-node cluster with Ceph: mgr failover, `CephOSDDown` and `ProxmoxNodeDown` fire and mail, cv4pve-diag host fallback | Local libvirt | `make lab-up TIER=2 && make lab-test TIER=2` | 45 + 40 min |
 | Lab tier 3 | Keycloak: oauth2-proxy, PVE and PDM OpenID logins | Local libvirt | `make lab-up TIER=3 && make lab-test TIER=3` | + 5 min |
-| Security | gitleaks, Trivy on configs and on the two custom images (CRITICAL/HIGH fail) | CI on push/PR and weekly | none locally (see workflow) | 3 min |
+| Security | gitleaks, Trivy on configs and on the two custom images (fixable CRITICAL/HIGH fail; unfixed ones are listed) | CI on push/PR and weekly | none locally (see workflow) | 3 min |
 
 CI never talks to Proxmox or Ceph. Anything that needs a PVE API, a node
 agent or Ceph is tested only in the lab, so a green CI does not prove it.
@@ -30,7 +30,13 @@ agent or Ceph is tested only in the lab, so a green CI does not prove it.
 | `lint.yml` | yamllint, hadolint (both Dockerfiles), shellcheck, markdownlint, changelog, drift | push/PR to `main` |
 | `validate-and-test.yml` | compose-config, promtool, amtool, then smoke-test and deploy-e2e | push/PR to `main` |
 | `security-scan.yml` | gitleaks, trivy-config, trivy-images | push/PR to `main`, weekly schedule |
-| `release.yml` | publishes a GitHub Release from the matching `CHANGELOG.md` section | push of a `vX.Y.Z` tag |
+| `release.yml` | publishes a GitHub Release from the matching `CHANGELOG.md` section | push of a `vX.Y.Z` tag, or manual with a tag |
+| `upstream-versions.yml` | compares the cv4pve `.deb` versions with upstream releases and opens an issue per outdated tool (red run = something to bump) | weekly, manual |
+
+Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for the
+compose images, the two Dockerfiles' base images and the GitHub Actions.
+Its PRs go through the same workflows; see the table below for the lab tier
+an image bump still needs.
 
 ### Deployment e2e in CI
 
@@ -63,8 +69,9 @@ on any failure. Logs go to `tests/lab/artifacts/`.
 | 0 | `t0-smoke.sh` | monitoring | `tests/integration/smoke-test.sh` on a real daemon; `generate-secrets.sh` file modes as root (600) and non-root (644) |
 | 0 | `t0-deploy.sh` | monitoring | `bootstrap-monitoring-vm.sh` with `tests/lab/lab.env`; the checks listed under Deployment e2e |
 | 1 | `t1-node.sh` | pve1 | `configure-auditd.sh`, `install-alloy-agent.sh`, node exporter: agents run and can read their sources |
-| 1 | `t1-monitoring.sh` | monitoring | the real node scraped, cv4pve against the real PVE API, node logs in Loki, PDM firewall and Traefik route, cv4pve-diag timer and report |
+| 1 | `t1-monitoring.sh` | monitoring | the real node scraped, cv4pve against the real PVE API, the cv4pve dashboard provisioned and every one of its queries valid on real metrics, node logs in Loki, PDM firewall and Traefik route, cv4pve-diag timer and report |
 | 1 | `t1-pve-reachability.sh` | pve1 | PDM `:8443` blocked from the management LAN, Loki and Traefik reachable |
+| 1 | `t1-pegaprox.sh` | monitoring | the opt-in PegaProx overlay: healthy, the image's own volumes, 401/200 through Traefik, config kept across a recreate; stopped again afterwards |
 | 1 | (host checks in `run.sh`) | host | on the perimeter address only `:443` answers |
 | 1 | `t1-after-reboot.sh` | monitoring | firewall and stack come back after `vagrant reload` |
 | 2 | `t2-cluster.sh` | pve1 | quorate 3-node cluster, Ceph `HEALTH_OK`, `enable-ceph-prometheus.sh` idempotent |
@@ -100,9 +107,9 @@ Shared helpers (`check`, `wait_for`, `expect_code`, `prom_true`,
 
 - an alert in `config/prometheus/rules/` has no row in the runbook's
   [alert catalogue](runbook-incident-response.md#alert-catalogue);
-- a `${VAR}` read by the compose files or the Alertmanager template is
-  missing from `.env.example`, or `.env.example` declares a variable
-  nothing reads;
+- a line of `.env.example` is neither a comment nor `KEY=value`, a
+  `${VAR}` read by the compose files or the Alertmanager template is
+  missing from it, or it declares a variable nothing reads;
 - a `prom/prometheus` or `prom/alertmanager` tag in CI, `tests/README.md`
   or the `Makefile` differs from `docker-compose.yml`, or a cv4pve image
   tag differs from its Dockerfile's `CV4PVE_VERSION`;
@@ -129,7 +136,9 @@ When it fails, fix the side that is wrong. Don't weaken the check.
 
 - No automated test for real Let's Encrypt issuance or an internal-CA
   certificate (`config/traefik/dynamic/tls-options.yml`).
-- The PegaProx overlay is only validated with `docker compose config`.
-- Grafana dashboards are fetched at deploy time
-  (`scripts/fetch-community-dashboards.sh`) and not checked.
+- PegaProx is tested up to its own health endpoint; adding a cluster to it
+  through its API is not automated.
+- The two community Grafana dashboards are fetched at deploy time
+  (`scripts/fetch-community-dashboards.sh`) and not checked; the committed
+  cv4pve dashboard is.
 - `tests/lab/` needs a libvirt host; it cannot run in hosted CI.

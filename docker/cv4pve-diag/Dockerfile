@@ -14,10 +14,10 @@
 ## cv4pve-diag`) — not a long-running service, so there is deliberately no
 ## HEALTHCHECK or EXPOSE here.
 
-FROM debian:trixie-slim AS builder
+FROM debian:trixie-20260918-slim AS builder
 
-ARG CV4PVE_VERSION=2.4.0
-ARG CV4PVE_DEB_SHA256=4d0e6e51496a0197ace9bf9f1b94603ffcdff10bfc7fa38cb53df9fa9172b3f5
+ARG CV4PVE_VERSION=2.7.0
+ARG CV4PVE_DEB_SHA256=19fcb83f96dcbed88abeeb7a8b24a06efad8566c9a8f8e3ccbbfa68301b46b40
 ARG CV4PVE_DEB_URL=https://github.com/Corsinvest/cv4pve-diag/releases/download/v${CV4PVE_VERSION}/cv4pve-diag-${CV4PVE_VERSION}-amd64.deb
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

@@ -20,10 +20,40 @@ names="$(prom_query 'count by (__name__) ({__name__=~"cv4pve_.+"})' | jq -r '.[]
 if [[ -n "${names}" ]]; then
   printf '%s\n' "${names}" > "${ARTIFACTS}/cv4pve-metric-names.txt"
   pass "cv4pve_* metrics present ($(wc -l <<<"${names}") names -> artifacts/cv4pve-metric-names.txt)"
+  # One sample series per metric, with its labels: the input for
+  # config/grafana/provisioning/dashboards/cv4pve/ and the guest alerts.
+  prom_query 'topk by (__name__) (1, {__name__=~"cv4pve_.+"})' \
+    | jq -r '.[].metric | tojson' | sort > "${ARTIFACTS}/cv4pve-metric-labels.jsonl"
 else
   fail "no cv4pve_* metrics in Prometheus"
   docker compose logs --tail 30 cv4pve-metrics-exporter
 fi
+
+# --- The committed cv4pve dashboard against the real metrics -----------------
+dash=config/grafana/provisioning/dashboards/cv4pve/cv4pve-overview.json
+gf_user="$(sed -n 's/^GRAFANA_ADMIN_USER=//p' .env)"
+gf_pass="$(sed -n 's/^GRAFANA_ADMIN_PASSWORD=//p' .env)"
+dashboard_provisioned() {
+  curl -sfk --max-time 15 --resolve "grafana.${DOMAIN}:443:127.0.0.1" -u "${gf_user}:${gf_pass}" \
+    "https://grafana.${DOMAIN}/api/dashboards/uid/cv4pve-overview" | jq -e '.dashboard.panels | length > 0'
+}
+wait_for "Grafana provisioned the cv4pve-overview dashboard" 120 dashboard_provisioned
+# Every panel query must be valid PromQL; the guest queries must return data.
+bad=0 empty=0 total=0
+while IFS= read -r expr; do
+  total=$((total + 1))
+  expr="${expr//\$node/.*}"
+  resp="$(docker compose exec -T prometheus wget -qO- \
+    "http://localhost:9090/api/v1/query?query=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "${expr}")" </dev/null)"
+  if [[ "$(jq -r .status <<<"${resp}")" != success ]]; then
+    bad=$((bad + 1)); echo "  invalid: ${expr}"
+  elif [[ "$(jq '.data.result | length' <<<"${resp}")" -eq 0 ]]; then
+    empty=$((empty + 1)); echo "  no data (yet): ${expr}"
+  fi
+done < <(jq -r '.panels[].targets[]?.expr' "${dash}")
+if ((bad == 0)); then pass "all ${total} dashboard queries are valid PromQL (${empty} without data yet)"; else fail "${bad}/${total} dashboard queries rejected by Prometheus"; fi
+guest_rows="cv4pve_guest_uptime_seconds * on(id) group_left(name, node, type, vmid) cv4pve_guest_info"
+check "guest table query returns the lab LXC (metrics joined with cv4pve_guest_info)" prom_true "${guest_rows}"
 
 # --- Logs from pve1 in Loki ---------------------------------------------------
 wait_for "Loki has {job=\"auditd\",host=\"pve1\"}" 180 loki_has '{job="auditd",host="pve1"}'
