@@ -17,10 +17,10 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,7 +28,7 @@ jobs:
   trivy-config:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Trivy config/misconfig scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -40,7 +40,7 @@ jobs:
   trivy-images:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build custom images
         # cv4pve-diag sits in the `tools` profile; without --profile it is
         # skipped and the scan below has no image to scan.

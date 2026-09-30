@@ -13,8 +13,8 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: pip install yamllint
@@ -23,14 +23,14 @@ jobs:
   hadolint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Lint cv4pve-diag Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: docker/cv4pve-diag/Dockerfile
           config: tests/lint/.hadolint.yaml
       - name: Lint cv4pve-metrics-exporter Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: docker/cv4pve-metrics-exporter/Dockerfile
           config: tests/lint/.hadolint.yaml
@@ -38,7 +38,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: shellcheck
         run: |
           shopt -s globstar
@@ -48,7 +48,7 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: tests/lint/check-changelog.sh
@@ -56,14 +56,14 @@ jobs:
   drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: python3 tests/lint/check-drift.py
 
   markdownlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: DavidAnson/markdownlint-cli2-action@v20
+      - uses: actions/checkout@v7
+      - uses: DavidAnson/markdownlint-cli2-action@v24
         with:
           config: tests/lint/.markdownlint.yaml
           globs: |
