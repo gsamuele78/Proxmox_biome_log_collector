@@ -14,3 +14,17 @@ providers:
     options:
       path: /etc/grafana/provisioning/dashboards/files
       foldersFromFilesStructure: false
+
+  ## Hand-built dashboards committed to this repo (no upstream to fetch them
+  ## from). Every panel query is run against real data by
+  ## tests/e2e/t1-monitoring.sh.
+  - name: proxmox-biome-local
+    orgId: 1
+    folder: "Proxmox Biome"
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 300
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/cv4pve
+      foldersFromFilesStructure: false

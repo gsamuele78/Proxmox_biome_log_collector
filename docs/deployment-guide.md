@@ -191,7 +191,12 @@ scripts/fetch-community-dashboards.sh
 Pulls Node Exporter Full (1860) and Ceph Cluster (2842) fresh from the
 grafana.com API into `config/grafana/provisioning/dashboards/files/`
 (gitignored — always fetched fresh, never committed). No official
-dashboard exists for `cv4pve-metrics-exporter`; see `docs/roadmap.md`.
+dashboard exists for `cv4pve-metrics-exporter`, so this repo ships its own,
+`Proxmox cluster and guests (cv4pve)`, from
+`config/grafana/provisioning/dashboards/cv4pve/` (committed, provisioned
+automatically, no fetch needed): cluster quorum, nodes, storage, and CPU,
+memory, disk and network of every VM and LXC, plus the guests with no
+backup job.
 
 ## 9. Validate
 

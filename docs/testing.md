@@ -69,7 +69,7 @@ on any failure. Logs go to `tests/lab/artifacts/`.
 | 0 | `t0-smoke.sh` | monitoring | `tests/integration/smoke-test.sh` on a real daemon; `generate-secrets.sh` file modes as root (600) and non-root (644) |
 | 0 | `t0-deploy.sh` | monitoring | `bootstrap-monitoring-vm.sh` with `tests/lab/lab.env`; the checks listed under Deployment e2e |
 | 1 | `t1-node.sh` | pve1 | `configure-auditd.sh`, `install-alloy-agent.sh`, node exporter: agents run and can read their sources |
-| 1 | `t1-monitoring.sh` | monitoring | the real node scraped, cv4pve against the real PVE API, node logs in Loki, PDM firewall and Traefik route, cv4pve-diag timer and report |
+| 1 | `t1-monitoring.sh` | monitoring | the real node scraped, cv4pve against the real PVE API, the cv4pve dashboard provisioned and every one of its queries valid on real metrics, node logs in Loki, PDM firewall and Traefik route, cv4pve-diag timer and report |
 | 1 | `t1-pve-reachability.sh` | pve1 | PDM `:8443` blocked from the management LAN, Loki and Traefik reachable |
 | 1 | `t1-pegaprox.sh` | monitoring | the opt-in PegaProx overlay: healthy, the image's own volumes, 401/200 through Traefik, config kept across a recreate; stopped again afterwards |
 | 1 | (host checks in `run.sh`) | host | on the perimeter address only `:443` answers |
@@ -138,6 +138,7 @@ When it fails, fix the side that is wrong. Don't weaken the check.
   certificate (`config/traefik/dynamic/tls-options.yml`).
 - PegaProx is tested up to its own health endpoint; adding a cluster to it
   through its API is not automated.
-- Grafana dashboards are fetched at deploy time
-  (`scripts/fetch-community-dashboards.sh`) and not checked.
+- The two community Grafana dashboards are fetched at deploy time
+  (`scripts/fetch-community-dashboards.sh`) and not checked; the committed
+  cv4pve dashboard is.
 - `tests/lab/` needs a libvirt host; it cannot run in hosted CI.

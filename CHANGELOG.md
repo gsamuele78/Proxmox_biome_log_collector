@@ -31,6 +31,12 @@ follows [Semantic Versioning](https://semver.org/).
   Dockerfiles' base images and GitHub Actions. `upstream-versions.yml`:
   weekly check of the cv4pve `.deb` versions, opening an issue (never a PR,
   ADR-0007) when upstream has a new release.
+- Grafana dashboard `Proxmox cluster and guests (cv4pve)`
+  (`config/grafana/provisioning/dashboards/cv4pve/`, provisioned
+  automatically): cluster quorum, nodes, storage, every VM and LXC (CPU,
+  memory, disk and network I/O, uptime) and the guests with no backup job,
+  from the PVE API with no agent in the guests. The lab checks every query
+  against real metrics.
 - Lab phase `tests/e2e/t1-pegaprox.sh` and
   [ADR-0008](docs/adr/0008-pegaprox-1x-opt-in-overlay.md).
 
