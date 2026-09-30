@@ -36,6 +36,11 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `trivy-images` fails only on CRITICAL/HIGH findings that have a fix, and
+  lists the unfixed ones in the job log. A HIGH with no fix in Debian 12's
+  OpenSSL (CVE-2026-84782, published 2026-09-29) otherwise blocks every
+  build with no possible action here; it stays visible and is re-checked
+  by the weekly run.
 - Images (checked against the registries on 2026-09-29): `traefik`
   v3.7.9 → v3.7.13, `prom/prometheus` v3.13.2 → v3.15.0,
   `prom/alertmanager` v0.33.1 → v0.34.1, `grafana/loki` 3.7.4 → 3.7.8,

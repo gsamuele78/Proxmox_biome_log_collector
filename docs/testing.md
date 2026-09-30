@@ -18,7 +18,7 @@ which one to run for a given change. For copy-paste commands see
 | Lab tier 1 | A real PVE 9 node: node-setup scripts, real scrape and PVE API, logs in Loki, PDM and its firewall, reboot survival | Local libvirt | `make lab-up && make lab-test` | 15 + 15 min |
 | Lab tier 2 | A 3-node cluster with Ceph: mgr failover, `CephOSDDown` and `ProxmoxNodeDown` fire and mail, cv4pve-diag host fallback | Local libvirt | `make lab-up TIER=2 && make lab-test TIER=2` | 45 + 40 min |
 | Lab tier 3 | Keycloak: oauth2-proxy, PVE and PDM OpenID logins | Local libvirt | `make lab-up TIER=3 && make lab-test TIER=3` | + 5 min |
-| Security | gitleaks, Trivy on configs and on the two custom images (CRITICAL/HIGH fail) | CI on push/PR and weekly | none locally (see workflow) | 3 min |
+| Security | gitleaks, Trivy on configs and on the two custom images (fixable CRITICAL/HIGH fail; unfixed ones are listed) | CI on push/PR and weekly | none locally (see workflow) | 3 min |
 
 CI never talks to Proxmox or Ceph. Anything that needs a PVE API, a node
 agent or Ceph is tested only in the lab, so a green CI does not prove it.
