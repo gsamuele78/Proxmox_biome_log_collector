@@ -85,7 +85,10 @@ wait_for "pushed log line is queryable from Loki" 60 loki_has "{job=\"t0-probe\"
 # the admin user from the first run, so align the DB with .env first.
 gf_user="$(sed -n 's/^GRAFANA_ADMIN_USER=//p' .env)"
 gf_pass="$(sed -n 's/^GRAFANA_ADMIN_PASSWORD=//p' .env)"
-docker compose exec -T grafana grafana cli admin reset-admin-password "${gf_pass}" >/dev/null 2>&1 || true
+# From stdin: generated passwords are URL-safe base64 and may start with "-",
+# which the CLI would parse as a flag.
+printf '%s\n' "${gf_pass}" | docker compose exec -T grafana \
+  grafana cli admin reset-admin-password --password-from-stdin >/dev/null 2>&1 || true
 gf_api() {
   curl -sfk --max-time 15 --resolve "grafana.${DOMAIN}:443:127.0.0.1" \
     -u "${gf_user}:${gf_pass}" "https://grafana.${DOMAIN}$1"
@@ -95,7 +98,13 @@ datasource_ok() {
   uid="$(gf_api "/api/datasources/name/$1" | jq -er .uid)" || return 1
   gf_api "/api/datasources/uid/${uid}/health" | jq -e '.status == "OK"'
 }
-check "Grafana admin login with the .env credentials" gf_api /api/user
+gf_login() {
+  local code
+  code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 --resolve "grafana.${DOMAIN}:443:127.0.0.1" \
+    -u "${gf_user}:${gf_pass}" "https://grafana.${DOMAIN}/api/user")"
+  [[ "${code}" == 200 ]] || { echo "  /api/user -> HTTP ${code}"; return 1; }
+}
+wait_for "Grafana admin login with the .env credentials" 60 gf_login || gf_login
 wait_for "Grafana datasource Prometheus is healthy" 60 datasource_ok Prometheus
 wait_for "Grafana datasource Loki is healthy" 60 datasource_ok Loki
 

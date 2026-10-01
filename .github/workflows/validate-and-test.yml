@@ -91,6 +91,8 @@ jobs:
         run: sudo bash tests/e2e/t0-deploy.sh
       - name: Stack logs on failure
         if: failure()
+        # The stack's compose project is named after /opt/proxmox-biome.
+        working-directory: /opt/proxmox-biome
         run: |
           sudo docker compose ps -a || true
           sudo docker compose logs --no-color --tail 200 || true
