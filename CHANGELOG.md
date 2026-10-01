@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-01
+
 ### Added
 
 - Lab phase `tests/e2e/t1-internal-ca.sh`: the internal-CA TLS path of the
@@ -28,6 +30,19 @@ follows [Semantic Versioning](https://semver.org/).
   `--chown` (distroless `nonroot`, the UID compose already runs them as).
   Newer hadolint (DL3066) rejects a non-numeric `USER`. No effect on the
   images.
+- CI: GitHub Actions bumped by Dependabot (`actions/checkout` v7,
+  `setup-python` v7, `hadolint-action` v3.5.0, `markdownlint-cli2-action`
+  v24, `gitleaks-action` v3); `deploy-e2e` has a 20-minute timeout and
+  waits for the runner's apt lock.
+
+### Upgrade from 0.3.0
+
+Nothing to do unless you use an internal CA: put the certificate and key
+in `config/traefik/certs/`, uncomment the three `certificates:` lines in
+`config/traefik/dynamic/tls-options.yml`, and
+`docker compose up -d traefik` (it needs the new `/certs` mount, so a
+restart alone is not enough). You can put the `certresolver` labels back if
+you had removed them.
 
 ## [0.3.0] - 2026-09-30
 
